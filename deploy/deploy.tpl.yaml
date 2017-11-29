@@ -1,0 +1,96 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: usnpi
+  labels:
+    app: db
+  annotations:
+    volume.beta.kubernetes.io/storage-class: standard
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 300Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: npi
+  labels:
+    system: usnpi
+    service: usnpi
+    environment: master
+  namespace: default
+spec:
+  ports:
+  - name: usnpi
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    service: usnpi
+    environment: master
+  type: NodePort
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: usnpi
+  labels:
+    system: usnpi
+    service: usnpi
+    environment: master
+  namespace: default
+spec:
+  replicas: 1
+  volumes:
+  - name: usnpi
+    persistentVolumeClaim:
+      claimName: usnpi
+  template:
+    metadata:
+      labels:
+        system: usnpi
+        service: usnpi-backend
+        environment: master
+    spec:
+      containers:
+      - name: usnpi-db
+        image: aidbox/aidboxdb:0.0.1-alpha3
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: usnpi
+          mountPath: /data
+          subPath: pgdata
+        env:
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_DB
+          value: "postgres"
+        - name: POSTGRES_PASSWORD 
+          value: verysecret
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+      - name: usnpi
+        image: "<IMAGE>"
+        imagePullPolicy: Always
+        env:
+        - name: PORT
+          value: "8080"
+        - name: PGHOST
+          value: localhost
+        - name: PGPORT
+          value: "5432"
+        - name: PGUSER
+          value: "postgres"
+        - name: PGPASSWORD
+          value: "verysecret"
+        - name: PGDATABASE
+          value: usnpi
+        ports:
+        - containerPort: 8080
+          protocol: TCP

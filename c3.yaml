@@ -1,0 +1,62 @@
+NPIusnpiREPOpiVersion: "zeroci.io/v1"
+kind: Build
+status: peinding
+environment:
+  GIT_COMMIT: "$(git rev-parse --short HEAD)"
+pipeline:
+
+- type: bash
+  command: echo -e "machine github.com\n  login $CI3_SECRET_GITHUB_TOKEN" >> ~/.netrc
+
+- type: env
+  GIT_COMMIT:
+    command: "git rev-parse --short HEAD"
+- type: env
+  NPI_REPO: eu.gcr.io/vivid-kite-171620/usnpi
+
+# Restore cache
+- type: maven
+  command: restore-cache
+  key: usnpi
+
+# Create aidboxdb
+# - type: bash
+#   command: docker rm -f aidboxdb-ci || echo 'nop'
+# - type: bash
+#   command: docker run -e POSTGRES_PASSWORD=postgres --name=aidboxdb-ci -d aidbox/aidboxdb:0.0.1-alpha3
+# - type: env
+#   PGPORT: 5432
+# - type: env
+#   PGHOST:
+#     command: "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' aidboxdb-ci"
+# - type: env
+#   DATABASE_URL:
+#     command: echo "jdbc:postgresql://$PGHOST:$PGPORT/proto_dev?user=postgres&password=postgres"
+
+# Tests
+- type: lein
+  command: test
+
+# Build usnpi container
+- type: bash
+  command: echo $GIT_COMMIT
+- type: lein
+  command: uberjar
+- type: bash
+  command: docker build -t $NPI_REPO:v_$GIT_COMMIT .
+- type: bash
+  command: docker tag $NPI_REPO:v_$GIT_COMMIT $NPI_REPO:latest
+- type: bash
+  command: docker login -u _json_key -p "$DOCKER_KEY" https://eu.gcr.io
+- type: bash
+  command: docker push $NPI_REPO:v_$GIT_COMMIT
+
+
+# Update cluster
+- type: bash
+  command: cd deploy && ./deploy.sh $CI3_BRANCH $NPI_REPO:v_$GIT_COMMIT
+
+# Save cache
+- type: maven
+  command: save-cache
+  key: usnpi

@@ -1,0 +1,13 @@
+version: '3'
+services:
+  usnpi_db:
+    volumes:
+      - "dbdata:/data"
+    image: aidbox/aidboxdb:0.0.1-alpha3
+    container_name: usnpi
+    ports:
+      - "5678:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: usnpi
+      POSTGRES_PASSWORD: verysecret
