@@ -12,6 +12,21 @@ spec:
   resources:
     requests:
       storage: 300Gi
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: usnpi-cache
+  labels:
+    app: db
+  annotations:
+    volume.beta.kubernetes.io/storage-class: standard
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
 
 ---
 apiVersion: v1
@@ -50,6 +65,9 @@ spec:
   - name: usnpi
     persistentVolumeClaim:
       claimName: usnpi
+  - name: import
+    persistentVolumeClaim:
+      claimName: usnpi-cache
   template:
     metadata:
       labels:
@@ -58,13 +76,16 @@ spec:
         environment: master
     spec:
       containers:
-      - name: usnpi-db
+      - name: pg
         image: aidbox/aidboxdb:0.0.1-alpha3
         imagePullPolicy: Always
         volumeMounts:
         - name: usnpi
           mountPath: /data
           subPath: pgdata
+        volumeMounts:
+        - name: import
+          mountPath: /import
         env:
         - name: POSTGRES_USER
           value: "postgres"
@@ -75,9 +96,12 @@ spec:
         ports:
         - containerPort: 8080
           protocol: TCP
-      - name: usnpi
+      - name: web
         image: "<IMAGE>"
         imagePullPolicy: Always
+        volumeMounts:
+        - name: import
+          mountPath: /import
         env:
         - name: PORT
           value: "8080"
@@ -91,6 +115,8 @@ spec:
           value: "verysecret"
         - name: PGDATABASE
           value: usnpi
+        - name: FHIRTERM_BASE
+          value: /import/
         ports:
         - containerPort: 8080
           protocol: TCP

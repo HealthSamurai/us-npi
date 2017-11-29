@@ -2,8 +2,10 @@ version: '3'
 services:
   usnpi_db:
     volumes:
-      - "dbdata:/data"
-    image: aidbox/aidboxdb:0.0.1-alpha3
+      - "./npidata:/data"
+      - "./build:/import"
+    # image: aidbox/aidboxdb:0.0.1-alpha3
+    image: postgres:10
     container_name: usnpi
     ports:
       - "5678:5432"

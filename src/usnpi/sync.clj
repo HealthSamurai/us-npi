@@ -99,6 +99,9 @@
 (defn current-month []
   (nth monthes (.getMonth (java.util.Date.))))
 
+(defn current-year []
+  (+ 1900 (.getYear (java.util.Date.))))
+
 (defn nucc-sql []
   (let [nucc-table-def (h/table-def-from-csv "nucc_taxonomy" "nucc-taxonomy.csv")
         nucc-csv (h/from-workdir "nucc-taxonomy.csv")]
@@ -120,168 +123,36 @@ CREATE INDEX nucc_taxonomy_code_idx ON nucc_taxonomy (code);
 
 (defn npi-sql []
   (let [csv-file (csv-file-name)
-        table-def (h/table-def-from-csv "npi" csv-file)
-        npi-csv (h/from-workdir csv-file)
-
+        table-def (h/table-def-from-csv "practitioner" csv-file)
+        npi-csv (str "/import/npi/" csv-file)
         new-columns (additional-columns)
         update-columns (set-additional-columns)
         org-search-expr (search-org-expr-sql)]
 (h/str-template
      "
-DROP TABLE IF EXISTS npi;
-~(table-def)
-ALTER TABLE npi ADD PRIMARY KEY (npi);
-COPY npi FROM '~(npi-csv)' CSV HEADER NULL '';
-
 DROP TABLE IF EXISTS practitioner;
-CREATE TABLE practitioner (LIKE npi);
-ALTER TABLE practitioner ADD PRIMARY KEY (npi);
-INSERT INTO practitioner SELECT * FROM npi WHERE entity_type_code = '1';
-ALTER TABLE practitioner ~(new-columns);
-
-UPDATE practitioner SET ~(update-columns);
-
-ALTER TABLE practitioner ADD COLUMN search tsvector;
-
-UPDATE practitioner SET search = (
-   setweight(to_tsvector(coalesce(npi,'')),'A')
-|| setweight(to_tsvector(coalesce(provider_organization_name_legal_business_name, '')), 'A')
-|| setweight(to_tsvector(coalesce(provider_last_name_legal_name, '')), 'A')
-|| setweight(to_tsvector(coalesce(provider_first_name, '')), 'B')
-|| setweight(to_tsvector(coalesce(provider_middle_name, '')), 'B')
-|| setweight(to_tsvector(coalesce(provider_credential_text, '')), 'B')
-|| setweight(to_tsvector(coalesce(provider_other_organization_name, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_other_last_name, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_other_first_name, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_other_middle_name, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_other_credential_text, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_first_line_business_mailing_address, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_second_line_business_mailing_address, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_business_mailing_address_city_name, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_business_mailing_address_state_name, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_first_line_business_practice_location_address, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_second_line_business_practice_location_address, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_business_practice_location_address_city_name, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_business_practice_location_address_state_name, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_1, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_2, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_3, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_4, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_5, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_6, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_7, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_8, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_9, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_1, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_2, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_3, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_4, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_5, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_6, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_7, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_8, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_9, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_1, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_2, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_3, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_4, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_5, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_6, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_7, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_8, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_9, '')), 'D')
-)
-;
-
-CREATE INDEX practitioner_ts_idx ON practitioner USING GIN (search);
+~(table-def)
+--ALTER TABLE practitioner ADD PRIMARY KEY (npi);
+COPY practitioner FROM '~(npi-csv)' CSV HEADER NULL '';
+CREATE TABLE organization (LIKE practitioner);
 DROP TABLE IF EXISTS organization;
-
-CREATE TABLE organization (LIKE npi);
-INSERT INTO organization SELECT * FROM npi WHERE entity_type_code = '2';
-ALTER TABLE organization ADD PRIMARY KEY (npi);
-ALTER TABLE organization ~(new-columns);
-UPDATE organization SET ~(update-columns);
-
-ALTER TABLE organization ADD COLUMN search tsvector;
-UPDATE organization SET search = to_tsvector(' ' || ~(org-search-expr));
-
-UPDATE organization SET search = (
-setweight(to_tsvector(coalesce(npi, '')),'A')
-|| setweight(to_tsvector(coalesce(provider_organization_name_legal_business_name, '')),'A')
-|| setweight(to_tsvector(coalesce(provider_other_organization_name, '')),'A')
-|| setweight(to_tsvector (coalesce(provider_first_line_business_mailing_address, '')) , 'B')
-|| setweight(to_tsvector(coalesce(provider_second_line_business_mailing_address, '')) , 'B')
-|| setweight(to_tsvector(coalesce(provider_business_mailing_address_city_name, '')) , 'B')
-|| setweight(to_tsvector(coalesce(provider_business_mailing_address_state_name, '')) , 'B')
-|| setweight(to_tsvector(coalesce(provider_business_mailing_address_postal_code, '')) , 'B')
-|| setweight(to_tsvector(coalesce(provider_first_line_business_practice_location_address, '')) , 'B')
-|| setweight(to_tsvector(coalesce(provider_second_line_business_practice_location_address, '')) , 'B')
-|| setweight(to_tsvector(coalesce(provider_business_practice_location_address_city_name, '')) , 'B')
-|| setweight(to_tsvector(coalesce(provider_business_practice_location_address_state_name, '')) , 'B')
-|| setweight(to_tsvector(coalesce(provider_business_practice_location_address_postal_code, '')) , 'B')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_1, '')),'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_2, '')),'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_3, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_4, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_5, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_6, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_7, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_8, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_text_9, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_1, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_2, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_3, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_4, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_5, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_6, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_7, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_8, '')), 'D')
-|| setweight(to_tsvector(coalesce(provider_license_number_9, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_1, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_2, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_3, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_4, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_5, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_6, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_7, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_8, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_9, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_state_1, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_state_2, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_state_3, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_state_4, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_state_5, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_state_6, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_state_7, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_state_8, '')), 'D')
-|| setweight(to_tsvector(coalesce(other_provider_identifier_state_9, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_group_1, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_group_2, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_group_3, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_group_4, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_group_5, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_group_6, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_group_7, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_group_8, '')), 'D')
-|| setweight(to_tsvector(coalesce(healthcare_provider_taxonomy_group_9, '')), 'D')
-)
-     ;
-CREATE INDEX organization_ts_idx ON organization USING GIN (search);
-
+INSERT INTO organization SELECT * FROM practitioner WHERE entity_type_code = '2';
+-- ALTER TABLE organization ADD PRIMARY KEY (npi);
 VACUUM FULL organization;
 VACUUM FULL practitioner;
-DROP table npi;
-
     ")))
 
 
 (defn init []
   (let [mon (current-month)
-        arch-name (str mon ".zip")]
+        year (str (current-year))
+        arch-name (str mon "-" year ".zip")]
     (h/in-dir
      "npi"
      (when (not (h/exists? arch-name))
-       (h/curl "http://download.cms.gov/nppes/NPPES_Data_Dissemination_October_2016.zip" arch-name)
+       (h/curl
+        (format "http://download.cms.gov/nppes/NPPES_Data_Dissemination_%s_%s.zip" mon year)
+        arch-name)
        (h/unzip arch-name))
 
      (when-not (h/exists? "nucc-taxonomy.csv")
@@ -289,6 +160,8 @@ DROP table npi;
 
      (h/exec-in-current-dir! "chmod a+rw *csv")
 
-     (h/spit* "index.sql" (str (nucc-sql) "\n" (npi-sql))))))
+     (h/spit* "index.sql" (str #_(nucc-sql) "\n" (npi-sql))))))
 
-(comment (init))
+(comment
+  (init)
+  )
