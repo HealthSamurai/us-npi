@@ -1,0 +1,13 @@
+apiVersion: "ci3.io/v1"
+kind: Repository
+metadata:
+  name: usnpi
+url: https://github.com/HealthSamurai/us-npi
+type: github
+fullName: HealthSamurai/us-npi
+oauthConsumer:
+  token: 
+    valueFrom:
+      secretKeyRef:
+        name: github
+        key: token
