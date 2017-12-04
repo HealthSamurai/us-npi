@@ -124,7 +124,7 @@ CREATE INDEX nucc_taxonomy_code_idx ON nucc_taxonomy (code);
 (defn npi-sql []
   (let [csv-file (csv-file-name)
         table-def (h/table-def-from-csv "practitioner" csv-file)
-        npi-csv (str "/import/npi/" csv-file)
+        npi-csv (str "/import/npi/data.csv")
         new-columns (additional-columns)
         update-columns (set-additional-columns)
         org-search-expr (search-org-expr-sql)]
@@ -132,14 +132,13 @@ CREATE INDEX nucc_taxonomy_code_idx ON nucc_taxonomy (code);
      "
 DROP TABLE IF EXISTS practitioner;
 ~(table-def)
---ALTER TABLE practitioner ADD PRIMARY KEY (npi);
 COPY practitioner FROM '~(npi-csv)' CSV HEADER NULL '';
 CREATE TABLE organization (LIKE practitioner);
+ALTER TABLE practitioner ADD PRIMARY KEY (npi);
 DROP TABLE IF EXISTS organization;
 INSERT INTO organization SELECT * FROM practitioner WHERE entity_type_code = '2';
--- ALTER TABLE organization ADD PRIMARY KEY (npi);
-VACUUM FULL organization;
-VACUUM FULL practitioner;
+--VACUUM FULL organization;
+--VACUUM FULL practitioner;
     ")))
 
 
@@ -160,8 +159,17 @@ VACUUM FULL practitioner;
 
      (h/exec-in-current-dir! "chmod a+rw *csv")
 
+     (let [csv (csv-file-name)]
+       (h/exec-in-current-dir!
+        (str "cat " csv " sed  -e 's/,\"\"/,/g'  | sed -e 's/\"<UNAVAIL>\"//g' > data.csv")))
+
      (h/spit* "index.sql" (str #_(nucc-sql) "\n" (npi-sql))))))
 
 (comment
   (init)
+
+  (h/in-dir
+   "npi"
+   (h/spit* "index.sql" (str (nucc-sql) "\n" (npi-sql))))
+
   )

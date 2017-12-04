@@ -14,4 +14,4 @@ cat deploy.yaml
 
 kubectl apply -f deploy.yaml
 
-echo "$IMAGE was deployed as cleo-backend-$1"
+echo "$IMAGE was deployed as npi"

@@ -13,8 +13,11 @@
                  [org.postgresql/postgresql "9.4.1211.jre7"]
                  [honeysql "0.9.1"]
                  [ring "1.5.1"]
+                 [route-map "0.0.6"]
+                 [clj-pg "0.0.3"]
+                 [clj-yaml "0.4.0"]
+                 [matcho "0.1.0-RC6"]
                  [ring/ring-defaults "0.2.3"]]
 
   :profiles {:uberjar {:aot :all :omit-source true}}
-  :uberjar-name "usnpi.jar"
-  )
+  :uberjar-name "usnpi.jar")
