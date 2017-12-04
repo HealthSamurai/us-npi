@@ -47,7 +47,6 @@ spec:
   selector:
     service: usnpi
     environment: master
-  type: NodePort
 
 
 ---
@@ -66,7 +65,7 @@ spec:
     metadata:
       labels:
         system: usnpi
-        service: usnpi-backend
+        service: usnpi
         environment: master
     spec:
       volumes:
