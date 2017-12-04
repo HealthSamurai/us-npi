@@ -61,6 +61,11 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      system: usnpi
+      service: usnpi
+      environment: master
   template:
     metadata:
       labels:
