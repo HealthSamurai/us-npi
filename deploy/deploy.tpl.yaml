@@ -65,7 +65,7 @@ spec:
     protocol: TCP
     targetPort: 8080
   selector:
-    service: usnpi
+    service: usnpi-web
     environment: master
 
 

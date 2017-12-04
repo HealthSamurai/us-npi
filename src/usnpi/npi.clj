@@ -192,14 +192,15 @@
 (defn get-practitioners [req]
   {:status 200
    :body (->>
-          (jdbc/query db "select * from practitioner limit 100")
+          (time (jdbc/query db "select * from practitioner limit 100"))
           (mapv to-practitioner))})
 
 (defn get-practitioner [{{npi :npi} :route-params :as req}]
   {:status 200
-   :body (->> (jdbc/query db ["select * from practitioner where npi = ?" npi])
-              first
-              to-practitioner)})
+   :body (->>
+          (time (jdbc/query db ["select * from practitioner where npi = ?" npi]))
+          first
+          to-practitioner)})
 
 
 
