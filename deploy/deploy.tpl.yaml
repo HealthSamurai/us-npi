@@ -49,6 +49,7 @@ spec:
     environment: master
   type: NodePort
 
+
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -93,9 +94,6 @@ spec:
           value: "usnpi"
         - name: POSTGRES_PASSWORD 
           value: verysecret
-        ports:
-        - containerPort: 8080
-          protocol: TCP
       - name: web
         image: "<IMAGE>"
         imagePullPolicy: Always
