@@ -82,7 +82,7 @@ spec:
         imagePullPolicy: Always
         volumeMounts:
         - name: usnpi
-          mountPath: /var/lib/postgresql/data
+          mountPath: /data
           subPath: pgdata
         volumeMounts:
         - name: import
@@ -92,6 +92,8 @@ spec:
           value: "postgres"
         - name: POSTGRES_DB
           value: "usnpi"
+        - name: PGDATA
+          value: "/data"
         - name: POSTGRES_PASSWORD 
           value: verysecret
       - name: web
