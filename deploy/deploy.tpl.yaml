@@ -32,10 +32,29 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  name: npi-db
+  labels:
+    system: usnpi
+    service: usnpi-db
+    environment: master
+  namespace: default
+spec:
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+  selector:
+    service: usnpi-db
+    environment: master
+
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: npi
   labels:
     system: usnpi
-    service: usnpi
+    service: usnpi-web
     environment: master
   namespace: default
 spec:
@@ -49,14 +68,15 @@ spec:
     environment: master
 
 
+
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: usnpi
+  name: usnpi-db
   labels:
     system: usnpi
-    service: usnpi
+    service: usnpi-db
     environment: master
   namespace: default
 spec:
@@ -64,13 +84,13 @@ spec:
   selector:
     matchLabels:
       system: usnpi
-      service: usnpi
+      service: usnpi-db
       environment: master
   template:
     metadata:
       labels:
         system: usnpi
-        service: usnpi
+        service: usnpi-db
         environment: master
     spec:
       volumes:
@@ -99,19 +119,43 @@ spec:
           value: "/data"
         - name: POSTGRES_PASSWORD 
           value: verysecret
+        ports:
+        - containerPort: 5432
+          protocol: TCP
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: usnpi
+  labels:
+    system: usnpi
+    service: usnpi-web
+    environment: master
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      system: usnpi
+      service: usnpi-web
+      environment: master
+  template:
+    metadata:
+      labels:
+        system: usnpi
+        service: usnpi-web
+        environment: master
+    spec:
+      containers:
       - name: web
         image: "<IMAGE>"
         imagePullPolicy: Always
-        volumeMounts:
-        - name: import
-          mountPath: /import
         env:
         - name: PORT
           value: "8080"
         - name: DATABASE_URL
-          value: jdbc:postgresql://localhost:5432/usnpi?stringtype=unspecified&user=postgres&password=verysecret
-        - name: FHIRTERM_BASE
-          value: /import/
+          value: jdbc:postgresql://usnpi-db:5432/usnpi?stringtype=unspecified&user=postgres&password=verysecret
         ports:
         - containerPort: 8080
           protocol: TCP
