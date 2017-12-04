@@ -61,14 +61,14 @@ metadata:
   namespace: default
 spec:
   replicas: 1
-  volumes:
-  - name: usnpi
-    persistentVolumeClaim:
-      claimName: usnpi
-  - name: import
-    persistentVolumeClaim:
-      claimName: usnpi-cache
   template:
+    volumes:
+    - name: usnpi
+      persistentVolumeClaim:
+        claimName: usnpi
+    - name: import
+      persistentVolumeClaim:
+        claimName: usnpi-cache
     metadata:
       labels:
         system: usnpi
@@ -77,7 +77,7 @@ spec:
     spec:
       containers:
       - name: pg
-        image: aidbox/aidboxdb:0.0.1-alpha3
+        image: postgres:10
         imagePullPolicy: Always
         volumeMounts:
         - name: usnpi
