@@ -25,6 +25,7 @@
                data (-> out (OutputStreamWriter.) (BufferedWriter.)) options)))))
 
 (defn index [{uri :uri qs :query-string :as req}]
+  (println "GET " uri " " qs)
   (if-let [h (routing/match [:get (str/lower-case uri)] routes)]
     (let [params (when qs (form-decode qs))]
       (-> ((:match h) (assoc req
@@ -41,6 +42,7 @@
 
 (defn -main [& _]
   #_(sync/init)
+  (println "Start server on 8080")
   (start))
 
 
