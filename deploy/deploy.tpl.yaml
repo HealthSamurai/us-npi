@@ -84,7 +84,6 @@ spec:
         - name: usnpi
           mountPath: /data
           subPath: pgdata
-        volumeMounts:
         - name: import
           mountPath: /import
         env:
