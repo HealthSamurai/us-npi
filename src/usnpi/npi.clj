@@ -189,11 +189,100 @@
 
 ;; (jdbc/query db "select count(*) from organization")
 
-(defn get-practitioners [req]
-  {:status 200
-   :body (->>
-          (time (jdbc/query db "select * from practitioner limit 100"))
-          (mapv to-practitioner))})
+
+(def name-fields ["provider_first_name"
+                 "provider_middle_name"
+                 "provider_last_name_legal_name"
+                 "provider_name_suffix_text"
+                 "provider_name_prefix_text"
+                 "provider_credential_text"
+                 "provider_other_first_name"
+                 "provider_other_middle_name"
+                 "provider_other_last_name"
+                 "provider_other_name_suffix_text"
+                 "provider_other_name_prefix_text"
+                 "provider_other_credential_text"])
+
+(def names-expr
+  (->> name-fields
+       (mapv (fn [x] (str " lower(coalesce(" x ", ''))")))
+       (str/join " || '$^' || ")
+       (str "'^' || ")))
+
+(defn sanitize [x]
+  (str/replace x #"[^a-zA-Z0-9]" ""))
+
+(defn name-cond [nm]
+  (->> 
+   (str/split (str/trim nm) #"\s+")
+   (map (fn [x] (str "(" names-expr ") like  '%^" (sanitize x) "%'")))
+   (str/join " AND ")))
+
+#_(defn name-cond [nm]
+  (str "(" names-expr ") ~  '("
+       (->>
+        (str/split (str/trim nm) #"\s+")
+        (map sanitize)
+        (map (fn [x] x))
+        (str/join "|"))
+
+       ")'"))
+
+
+
+(name-cond "david")
+
+(defn index []
+  (str
+   "
+create extension if not exists pg_trgm;
+CREATE INDEX trgm_idx ON practitioner USING GIST (
+( " names-expr "  )
+ gist_trgm_ops )"
+   ))
+
+
+(defn migrate []
+  (when-not (first (jdbc/query db "select c.relname from pg_index i, pg_class c  where c.oid = i.indexrelid and c.relname = 'trgm_idx'"))
+    (jdbc/execute! db (index))
+    (try
+      (jdbc/query db "vacuum (analyze) practitioner")
+      (catch Exception e (println "vacuum")))))
+
+(comment
+  (jdbc/execute! db "drop index trgm_idx")
+
+  (index)
+  (migrate)
+
+  )
+
+
+(defn elements [els rs]
+  (if-not els
+    rs
+    (let [els (->> (str/split els #"\s*,\s*")
+                   (map keyword))]
+      (mapv (fn [x] (select-keys x els)) rs))))
+
+(defn limit [x y]
+  (str " limit " (or x y)))
+
+(defn get-practitioners [{params :params :as req}]
+  (if-not (:name params)
+    {:status 422
+     :body {:message "Please provide name="
+            :example "?name=albert%20avila&_format=yaml&_elements=name,id&_count=100"}}
+    (let [sql (str 
+               "select * from practitioner where "
+               (name-cond (:name params))
+               (limit (:_count params) 100))]
+      (println sql)
+      {:status 200
+       :body (->>
+              (time (jdbc/query db sql))
+              (mapv to-practitioner)
+              (elements (:_elements params)))})))
 
 (defn get-practitioner [{{npi :npi} :route-params :as req}]
   {:status 200
@@ -201,8 +290,6 @@
           (time (jdbc/query db ["select * from practitioner where npi = ?" npi]))
           first
           to-practitioner)})
-
-
 
 
 
