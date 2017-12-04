@@ -62,6 +62,11 @@ metadata:
 spec:
   replicas: 1
   template:
+    metadata:
+      labels:
+        system: usnpi
+        service: usnpi
+        environment: master
     spec:
       volumes:
       - name: usnpi
