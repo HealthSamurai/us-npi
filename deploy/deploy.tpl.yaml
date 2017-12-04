@@ -62,19 +62,19 @@ metadata:
 spec:
   replicas: 1
   template:
-    volumes:
-    - name: usnpi
-      persistentVolumeClaim:
-        claimName: usnpi
-    - name: import
-      persistentVolumeClaim:
-        claimName: usnpi-cache
     metadata:
       labels:
         system: usnpi
         service: usnpi-backend
         environment: master
     spec:
+      volumes:
+      - name: usnpi
+        persistentVolumeClaim:
+          claimName: usnpi
+      - name: import
+        persistentVolumeClaim:
+          claimName: usnpi-cache
       containers:
       - name: pg
         image: postgres:10
