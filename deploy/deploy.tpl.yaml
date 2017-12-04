@@ -12,6 +12,7 @@ spec:
   resources:
     requests:
       storage: 100Gi
+
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
@@ -155,7 +156,7 @@ spec:
         - name: PORT
           value: "8080"
         - name: DATABASE_URL
-          value: jdbc:postgresql://usnpi-db:5432/usnpi?stringtype=unspecified&user=postgres&password=verysecret
+          value: jdbc:postgresql://npi-db:5432/usnpi?stringtype=unspecified&user=postgres&password=verysecret
         ports:
         - containerPort: 8080
           protocol: TCP
