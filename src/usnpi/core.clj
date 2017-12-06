@@ -16,6 +16,7 @@
 (def routes
   {:GET (fn [req] {:status 200 :body (pr-str req)})
    "practitioner" {:GET #'npi/get-practitioners
+                   "$batch" {:GET #'npi/get-practitioners-by-ids}
                    [:npi] {:GET #'npi/get-practitioner}}})
 
 (defn generate-json-stream
@@ -49,9 +50,9 @@
     {:status 404
      :body (str "Url " (str/lower-case uri) " not found " (keys routes))}))
 
-(defn start []
+(defn start [& [port]]
   (npi/migrate)
-  (server/run-server #'index {:port 8080}))
+  (server/run-server #'index {:port (or port 8080)}))
 
 (defn -main [& _]
   #_(sync/init)
@@ -60,7 +61,7 @@
 
 
 (comment
-  (def srv (start))
+  (def srv (start 8765))
 
   (srv)
 

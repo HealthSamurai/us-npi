@@ -128,6 +128,7 @@ CREATE INDEX nucc_taxonomy_code_idx ON nucc_taxonomy (code);
         new-columns (additional-columns)
         update-columns (set-additional-columns)
         org-search-expr (search-org-expr-sql)]
+
 (h/str-template
      "
 DROP TABLE IF EXISTS practitioner;

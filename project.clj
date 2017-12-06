@@ -17,6 +17,8 @@
                  [clj-pg "0.0.3"]
                  [clj-yaml "0.4.0"]
                  [matcho "0.1.0-RC6"]
+                 [clojurewerkz/elastisch "3.0.0-beta2"]
+                 [clojure-csv/clojure-csv "2.0.1"]
                  [ring/ring-defaults "0.2.3"]]
 
   :profiles {:uberjar {:aot :all :omit-source true}}

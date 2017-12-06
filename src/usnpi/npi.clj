@@ -291,5 +291,18 @@ CREATE INDEX trgm_idx ON practitioner USING GIST (
           first
           to-practitioner)})
 
+(defn get-practitioners-by-ids [{params :params :as req}]
+  (if-let [ids  (:ids params)]
+    (let [sql (format "select * from practitioner where npi in (%s)"
+                  (->> (str/split ids #"\s*,\s*")
+                      (mapv (fn [id] (str "'" (sanitize id) "'")))
+                      (str/join ",")))]
+      (println sql)
+      {:status 200
+       :body (->>
+              (time (jdbc/query db sql))
+              (mapv to-practitioner))})
+    {:status 422
+     :body {:message "ids parameter requried"}}))
 
 
