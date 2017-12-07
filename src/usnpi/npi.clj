@@ -1,11 +1,13 @@
 (ns usnpi.npi
-  (:require [honeysql.core :as honey]
-            [honeysql.format :as sqlf]
-            [clojure.java.jdbc :as jdbc]
-            [usnpi.mapper :as mapper]
+  (:require [clojure.java.jdbc :as jdbc]
+            [clojure.string :as str]
             [environ.core :as env]
-            [clojure.string :as str]))
+            [honeysql.core :as honey]
+            [honeysql.format :as sqlf]
+            [usnpi.mapper :as mapper])
+  (:import [java.net URLEncoder]))
 
+(defn url-encode [x] (when x (URLEncoder/encode x)))
 
 (def db {:dbtype "postgresql"
          :connection-uri (or (env/env :database-url) "jdbc:postgresql://localhost:5678/usnpi?stringtype=unspecified&user=postgres&password=verysecret")})
@@ -24,9 +26,7 @@
    :gender {"M" "male" "F" "female"}})
 
 (def npi-identifier
-  {:system "http://hl7.org/fhir/sid/us-npi"
-   :type {:text "Provider number"
-          :coding [{:code "PRN" :display "Provider number"}]}})
+  {:system "http://hl7.org/fhir/sid/us-npi"})
 
 (defn postfix [x p]
   (keyword (str (str (name x) "_" (str p)))))
@@ -78,18 +78,21 @@
    (mapcat
     (fn [i]
       [{:fhir [:identifier i :value] :npi [(postfix :other_provider_identifier i)]}
-       ;; ext
+
+       ;; to system
        {:fhir [:identifier i :state] :npi [(postfix :other_provider_identifier_state i)]}
-       ;; ext
-       {:fhir [:identifier i :assigner] :npi [(postfix :other_provider_identifier_issuer i)]}
-       {:fhir [:identifier i :type :coding 0 :code] :npi [(postfix :other_provider_identifier_type_code i)]}])
+       {:fhir [:identifier i :code] :npi [(postfix :other_provider_identifier_type_code i)]}
+       {:fhir [:identifier i :issuer]  :npi [(postfix :other_provider_identifier_issuer i)]}
+
+
+       ])
     (range 1 50))))
 
 (def organization-mapping
   (concat
    [{:fhir [:resourceType] :fhir_const "Organization"}
     {:fhir [:id]  :npi [:npi]}
-    {:fhir [:meta :lastUpdated]  :npi [:last_update_date] :to_fhir to-iso-time}
+    {:fhir [:npi :lastUpdated]  :npi [:last_update_date] :to_fhir to-iso-time}
 
     {:fhir [:name]  :npi [:provider_organization_name_legal_business_name]}
     ;; other name
@@ -134,23 +137,23 @@
   (concat
    [{:fhir [:resourceType] :fhir_const "Practitioner"}
     {:fhir [:id]  :npi [:npi]}
-    {:fhir [:meta :lastUpdated]  :npi [:last_update_date] :to_fhir to-iso-time}
-    {:fhir [:is_sole_proprietor]  :npi [:is_sole_proprietor]}
-    {:fhir [:provider_enumeration_date]  :npi [:provider_enumeration_date] :to_fhir to-iso-time}
+    ;; {:fhir [:npi :lastUpdated]  :npi [:last_update_date] :to_fhir to-iso-time}
+    ;; {:fhir [:npi :is_sole_proprietor]  :npi [:is_sole_proprietor]}
+    ;; {:fhir [:npi :provider_enumeration_date]  :npi [:provider_enumeration_date] :to_fhir to-iso-time}
 
     {:fhir [:name {:use "official"} :given []]  :npi [:provider_first_name]}
-    {:fhir [:name {:use "official"} :middle []]  :npi [:provider_middle_name]}
+    {:fhir [:name {:use "official"} :given []]  :npi [:provider_middle_name]}
     {:fhir [:name {:use "official"} :family]   :npi [:provider_last_name_legal_name]}
     {:fhir [:name {:use "official"} :suffix []] :npi [:provider_name_suffix_text]}
     {:fhir [:name {:use "official"} :prefix []] :npi [:provider_name_prefix_text]}
     {:fhir [:name {:use "official"} :prefix []] :npi [:provider_credential_text]}
 
-    {:fhir [:name {:use "usual"} :given 0]  :npi [:provider_other_first_name]}
-    {:fhir [:name {:use "usual"} :given 1]  :npi [:provider_other_middle_name]}
-    {:fhir [:name {:use "usual"} :family 0] :npi [:provider_other_last_name]}
-    {:fhir [:name {:use "usual"} :suffix 0] :npi [:provider_other_name_suffix_text]}
-    {:fhir [:name {:use "usual"} :prefix 0] :npi [:provider_other_name_prefix_text]}
-    {:fhir [:name {:use "usual"} :prefix 1] :npi [:provider_other_credential_text]}
+    {:fhir [:name {:use "usual"} :given []]  :npi [:provider_other_first_name]}
+    {:fhir [:name {:use "usual"} :given []]  :npi [:provider_other_middle_name]}
+    {:fhir [:name {:use "usual"} :family] :npi [:provider_other_last_name]}
+    {:fhir [:name {:use "usual"} :suffix []] :npi [:provider_other_name_suffix_text]}
+    {:fhir [:name {:use "usual"} :prefix []] :npi [:provider_other_name_prefix_text]}
+    {:fhir [:name {:use "usual"} :prefix []] :npi [:provider_other_credential_text]}
 
     {:fhir [:gender] :npi [:provider_gender_code] :to_fhir #(get {"M" "male" "F" "female"} %)}]
 
@@ -158,15 +161,21 @@
 
    (mapcat
     (fn [i]
-      [{:fhir [:role (dec i) :identifier {:system "us-license"} :value]
+
+      [{:fhir [:qualification (dec i) :identifier {:system "http://fhir.us/us-license"} :value]
         :npi [(postfix :provider_license_number i)]}
-       {:fhir [:role (dec i) :identifier {:system "us-license"} :extension :state]
+
+       {:fhir [:qualification (dec i) :state]
         :npi [(postfix :provider_license_number_state_code i)]}
-       {:fhir [:role (dec i) :specialty 0 :coding {:system "http://nucc.org/provider-taxonomy"} :code]
+
+       {:fhir [:qualification (dec i) :code :coding {:system "http://nucc.org/provider-taxonomy"} :code]
         :npi [(postfix :healthcare_provider_taxonomy_code i)]}
-       {:fhir [:role (dec i) :specialty 0 :coding {:system "http://nucc.org/provider-taxonomy"} :display]
+
+       {:fhir [:qualification (dec i) :code :text]
         :npi [(postfix :healthcare_provider_taxonomy_text i)]}
-       {:fhir [:role (dec i) :primary_taxonomy]
+
+       #_(postfix :healthcare_provider_taxonomy_text i)
+       #_{:fhir [:qualification (dec i) :primary_taxonomy]
         :npi [(postfix :healthcare_provider_primary_taxonomy_switch i)]}])
     (range 1 10))))
 
@@ -179,8 +188,28 @@
 (def pract-mapped-fields
   (mapcat :npi practitioner-mapping))
 
+
+(def identifier-codes
+  {"01" "OTHER"
+   "02" "MEDICARE UPIN"
+   "04" "MEDICARE ID-TYPE UNSPECIFIED"
+   "05" "MEDICAID"
+   "06" "MEDICARE OSCAR/CERTIFICATION"
+   "07" "MEDICARE NSC"
+   "08" "MEDICARE PIN"})
+
 (defn to-practitioner [o]
-  (mapper/transform o practitioner-mapping [:npi :fhir]))
+  (let [pr (mapper/transform o practitioner-mapping [:npi :fhir])]
+    ;; FIX identifiers
+    (update pr
+            :identifier
+            (fn [is]
+              (->> is
+                   (mapv (fn [x]
+                           (if (or (:state x) (:issuer x) (:code x))
+                             {:value (:value x)
+                              :system (str "http://npiregistry.cms.gov/other-identifier?issuer=" (url-encode (or (:issuer x) (get identifier-codes (:code x)))) "&state=" (:state x) "&code=" (:code x))}
+                             x))))))))
 
 
 
