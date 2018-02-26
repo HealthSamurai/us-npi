@@ -3,8 +3,7 @@
             [clojure.string :as str]
             [environ.core :as env]
             [honeysql.core :as honey]
-            [honeysql.format :as sqlf]
-            [usnpi.mapper :as mapper])
+            [honeysql.format :as sqlf])
   (:import [java.net URLEncoder]))
 
 (defn url-encode [x] (when x (URLEncoder/encode x)))
