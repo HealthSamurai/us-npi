@@ -85,7 +85,7 @@ from (select %s as resource from practitioner where %s limit %s) x"
 (defn get-pracitioners [{params :params :as req}]
   (let [q (get-practitioners-query params)
         _ (println q)
-        prs (jdbc/query db [q])]
+        prs (time (jdbc/query db [q]))]
     {:status 200
      :body (:bundle (first prs))}))
 
