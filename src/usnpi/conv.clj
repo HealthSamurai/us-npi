@@ -1,11 +1,6 @@
 (ns usnpi.conv
   (:require [clojure.string :as str]))
 
-(defn jo [m]
-  (let [sql ["jsonb_build_object("]]
-
-    (conj sql ")")))
-
 
 (defmulti to-sql (fn [acc x]
                    (cond
@@ -163,8 +158,10 @@
          " truncate practitioner_json; \n"
          "insert into practitioner_json (id,resource) \n select npi, \n"
          (str/join " " (to-sql [] conv))
-         "\nfrom practitioner
+         "\nfrom original
 where entity_type_code = '1'
-limit 10000
-")))
+--limit 10000
+"))
+
+  )
 

@@ -9,329 +9,127 @@
 
 (defn url-encode [x] (when x (URLEncoder/encode x)))
 
+(defn sanitize [x] (str/replace x #"[^a-zA-Z0-9]" ""))
+
 (def db {:dbtype "postgresql"
          :connection-uri (or (env/env :database-url) "jdbc:postgresql://localhost:5678/usnpi?stringtype=unspecified&user=postgres&password=verysecret")})
 
-(defn strip-nils [r]
-  (->>
-   r
-   (reduce (fn [acc [k v]]
-             (if v (assoc! acc k v) acc)) (transient {}))
-   (persistent!)))
-
-
-(def dicts
-  {:entity_type_code {1 "Individual"
-                      2 "Organization"}
-   :gender {"M" "male" "F" "female"}})
-
-(def npi-identifier
-  {:system "http://hl7.org/fhir/sid/us-npi"})
-
-(defn postfix [x p]
-  (keyword (str (str (name x) "_" (str p)))))
-
-(defn clear-empty [x]
-  (cond
-    (map? x) (let [res  (reduce (fn [acc [k v]]
-                                  (if-let [vv (clear-empty v)]
-                                    (assoc acc k vv)
-                                    acc)) {} x)]
-               (when-not (empty? res) res))
-
-    (vector? x) (let [res (filterv identity (map clear-empty x))]
-                  (when-not (empty? res) res))
-
-    (string? x) (when-not (str/blank? x) x)
-    (not (nil? x)) x))
-
-
-
-
-(defn to-iso-time  [x]
-  (and x(let [[m d y] (str/split x #"/")]
-          (str y "-" m "-" d))))
-
-(def shared-mapping
-  (concat
-   [{:fhir [:address {:use "work"} :city]       :npi [:provider_business_practice_location_address_city_name]}
-    {:fhir [:address {:use "work"} :country]    :npi [:provider_business_practice_location_address_country_code_if_out]}
-    {:fhir [:address {:use "work"} :line 0]     :npi [:provider_first_line_business_practice_location_address]}
-    {:fhir [:address {:use "work"} :line 1]     :npi [:provider_second_line_business_practice_location_address]}
-    {:fhir [:address {:use "work"} :state]      :npi [:provider_business_practice_location_address_state_name]}
-    {:fhir [:address {:use "work"} :postalCode] :npi [:provider_business_practice_location_address_postal_code]}
-
-    {:fhir [:address {:use "postal"} :city]       :npi [:provider_business_mailing_address_city_name]}
-    {:fhir [:address {:use "postal"} :country]    :npi [:provider_business_mailing_address_country_code_if_outside_us]}
-    {:fhir [:address {:use "postal"} :line 0]     :npi [:provider_first_line_business_mailing_address]}
-    {:fhir [:address {:use "postal"} :line 1]     :npi [:provider_second_line_business_mailing_address]}
-    {:fhir [:address {:use "postal"} :state]      :npi [:provider_business_mailing_address_state_name]}
-    {:fhir [:address {:use "postal"} :postalCode] :npi [:provider_business_mailing_address_postal_code]}
-
-    {:fhir [:telecom {:system "phone" :use "work"} :value] :npi [:provider_business_practice_location_address_telephone_number]}
-    {:fhir [:telecom {:system "phone" :use "mailing"} :value] :npi [:provider_business_mailing_address_telephone_number]}
-    {:fhir [:telecom {:system "fax" :use "work"} :value] :npi [:provider_business_practice_location_address_fax_number]}
-    {:fhir [:telecom {:system "fax" :use "mailing"} :value] :npi [:provider_business_mailing_address_fax_number]}
-
-    {:fhir [:identifier npi-identifier :value] :npi [:npi]}]
-
-   (mapcat
-    (fn [i]
-      [{:fhir [:identifier i :value] :npi [(postfix :other_provider_identifier i)]}
-
-       ;; to system
-       {:fhir [:identifier i :state] :npi [(postfix :other_provider_identifier_state i)]}
-       {:fhir [:identifier i :code] :npi [(postfix :other_provider_identifier_type_code i)]}
-       {:fhir [:identifier i :issuer]  :npi [(postfix :other_provider_identifier_issuer i)]}
-
-
-       ])
-    (range 1 50))))
-
-(def organization-mapping
-  (concat
-   [{:fhir [:resourceType] :fhir_const "Organization"}
-    {:fhir [:id]  :npi [:npi]}
-    {:fhir [:npi :lastUpdated]  :npi [:last_update_date] :to_fhir to-iso-time}
-
-    {:fhir [:name]  :npi [:provider_organization_name_legal_business_name]}
-    ;; other name
-    {:fhir [:other_name] :npi [:provider_other_organization_name]}
-
-    {:fhir [:type {:coding [{:system "http://nucc.org"}]} :coding 0 :value] :npi [:healthcare_provider_taxonomy_code]}
-
-    {:fhir [:contact {:purpose {:text "ADMIN"}} :name :family 0]    :npi [:authorized_official_last_name]}
-    {:fhir [:contact {:purpose {:text "ADMIN"}} :purpose :coding {:system "npi.org"} :code]    :npi [:authorized_official_title_or_position]}
-    {:fhir [:contact {:purpose {:text "ADMIN"}} :name :given 0]    :npi [:authorized_official_first_name]}
-    {:fhir [:contact {:purpose {:text "ADMIN"}} :name :given 1]    :npi [:authorized_official_middle_name]}
-    {:fhir [:contact {:purpose {:text "ADMIN"}} :name :prefix 0]    :npi [:authorized_official_name_prefix_text]}
-    {:fhir [:contact {:purpose {:text "ADMIN"}} :name :prefix 0]    :npi [:authorized_official_name_prefix_text]}
-
-    {:fhir [:contact {:purpose {:text "ADMIN"}} :telecom {:system "phone"} :value]    :npi [:authorized_official_telephone_number]}]
-
-   (mapcat
-    (fn [i]
-      [{:fhir [:type :coding i :code] :npi [(postfix :healthcare_provider_taxonomy_code (inc i))]}
-       {:fhir [:type :coding i :system]
-        :calculate [:type :coding i :code]
-        :to_fhir (constantly "http://nucc.org/provider-taxonomy")}
-       {:fhir [:type :coding i :display] :npi [(postfix :healthcare_provider_taxonomy_text (inc i))]}])
-    (range 0 10))
-
-   shared-mapping))
-
-(def org-mapped-fields
-  (mapcat :npi organization-mapping))
-
-(defn to-organization [o]
-  (let [ext (apply dissoc o org-mapped-fields)
-        fhir (mapper/transform o organization-mapping [:npi :fhir])]
-    (assoc-in fhir [:extension] (merge (or (:extension fhir) {}) ext))))
-
-(defn mk-bundle [params resources]
-  {:resourceType "Bundle"
-   :type "searchset"
-   :entry (map (fn [r] {:resource r}) resources)})
-
-(def practitioner-mapping
-  (concat
-   [{:fhir [:resourceType] :fhir_const "Practitioner"}
-    {:fhir [:id]  :npi [:npi]}
-    ;; {:fhir [:npi :lastUpdated]  :npi [:last_update_date] :to_fhir to-iso-time}
-    ;; {:fhir [:npi :is_sole_proprietor]  :npi [:is_sole_proprietor]}
-    ;; {:fhir [:npi :provider_enumeration_date]  :npi [:provider_enumeration_date] :to_fhir to-iso-time}
-
-    {:fhir [:name {:use "official"} :given []]  :npi [:provider_first_name]}
-    {:fhir [:name {:use "official"} :given []]  :npi [:provider_middle_name]}
-    {:fhir [:name {:use "official"} :family]   :npi [:provider_last_name_legal_name]}
-    {:fhir [:name {:use "official"} :suffix []] :npi [:provider_name_suffix_text]}
-    {:fhir [:name {:use "official"} :prefix []] :npi [:provider_name_prefix_text]}
-    {:fhir [:name {:use "official"} :prefix []] :npi [:provider_credential_text]}
-
-    {:fhir [:name {:use "usual"} :given []]  :npi [:provider_other_first_name]}
-    {:fhir [:name {:use "usual"} :given []]  :npi [:provider_other_middle_name]}
-    {:fhir [:name {:use "usual"} :family] :npi [:provider_other_last_name]}
-    {:fhir [:name {:use "usual"} :suffix []] :npi [:provider_other_name_suffix_text]}
-    {:fhir [:name {:use "usual"} :prefix []] :npi [:provider_other_name_prefix_text]}
-    {:fhir [:name {:use "usual"} :prefix []] :npi [:provider_other_credential_text]}
-
-    {:fhir [:gender] :npi [:provider_gender_code] :to_fhir #(get {"M" "male" "F" "female"} %)}]
-
-   shared-mapping
-
-   (mapcat
-    (fn [i]
-
-      [{:fhir [:qualification (dec i) :identifier {:system "http://fhir.us/us-license"} :value]
-        :npi [(postfix :provider_license_number i)]}
-
-       {:fhir [:qualification (dec i) :state]
-        :npi [(postfix :provider_license_number_state_code i)]}
-
-       {:fhir [:qualification (dec i) :code :coding {:system "http://nucc.org/provider-taxonomy"} :code]
-        :npi [(postfix :healthcare_provider_taxonomy_code i)]}
-
-       {:fhir [:qualification (dec i) :code :text]
-        :npi [(postfix :healthcare_provider_taxonomy_text i)]}
-
-       #_(postfix :healthcare_provider_taxonomy_text i)
-       #_{:fhir [:qualification (dec i) :primary_taxonomy]
-        :npi [(postfix :healthcare_provider_primary_taxonomy_switch i)]}])
-    (range 1 10))))
-
-(def pract-name-fields  (mapcat :npi (filter (fn [x] (= :name (first (:fhir x)))) practitioner-mapping)))
-(def pract-state-fields (mapcat :npi (filter (fn [x]
-                                               (and
-                                                (= :address (first (:fhir x)))
-                                                (= :state (last (:fhir x))))) practitioner-mapping)))
-
-(def pract-mapped-fields
-  (mapcat :npi practitioner-mapping))
-
-
-(def identifier-codes
-  {"01" "OTHER"
-   "02" "MEDICARE UPIN"
-   "04" "MEDICARE ID-TYPE UNSPECIFIED"
-   "05" "MEDICAID"
-   "06" "MEDICARE OSCAR/CERTIFICATION"
-   "07" "MEDICARE NSC"
-   "08" "MEDICARE PIN"})
-
-(defn to-practitioner [o]
-  (let [pr (mapper/transform o practitioner-mapping [:npi :fhir])]
-    ;; FIX identifiers
-    (update pr
-            :identifier
-            (fn [is]
-              (->> is
-                   (mapv (fn [x]
-                           (if (or (:state x) (:issuer x) (:code x))
-                             {:value (:value x)
-                              :system (str "http://npiregistry.cms.gov/other-identifier?issuer=" (url-encode (or (:issuer x) (get identifier-codes (:code x)))) "&state=" (:state x) "&code=" (:code x))}
-                             x))))))))
-
-
-
-;; (jdbc/query db "select 1")
-;; (jdbc/query db "select count(*) from practitioner")
-
-;; (jdbc/query db "select count(*) from organization")
-
-
-(def name-fields ["provider_first_name"
-                 "provider_middle_name"
-                 "provider_last_name_legal_name"
-                 "provider_name_suffix_text"
-                 "provider_name_prefix_text"
-                 "provider_credential_text"
-                 "provider_other_first_name"
-                 "provider_other_middle_name"
-                 "provider_other_last_name"
-                 "provider_other_name_suffix_text"
-                 "provider_other_name_prefix_text"
-                 "provider_other_credential_text"])
-
-(def names-expr
-  (->> name-fields
-       (mapv (fn [x] (str " lower(coalesce(" x ", ''))")))
-       (str/join " || '$^' || ")
-       (str "'^' || ")))
-
-(defn sanitize [x]
-  (str/replace x #"[^a-zA-Z0-9]" ""))
-
-(defn name-cond [nm]
+(def search-expression
   (->> 
-   (str/split (str/trim nm) #"\s+")
-   (map (fn [x] (str "(" names-expr ") like  '%^" (sanitize x) "%'")))
-   (str/join " AND ")))
+   [[:g :name 0 :given 0]
+    [:g :name 0 :given 1]
+    [:m :name 0 :middle 0]
+    [:p :name 0 :prefix 0]
+    [:z :name 0 :siffix 0]
+    [:f :name 0 :family]
 
-#_(defn name-cond [nm]
-  (str "(" names-expr ") ~  '("
-       (->>
-        (str/split (str/trim nm) #"\s+")
-        (map sanitize)
-        (map (fn [x] x))
-        (str/join "|"))
+    [:g :name 1 :given 0]
+    [:g :name 1 :given 1]
+    [:m :name 1 :middle 0]
+    [:p :name 1 :prefix 0]
+    [:z :name 1 :siffix 0]
+    [:f :name 1 :family]
 
-       ")'"))
+    [:s :address 0 :state]
+    [:c :address 0 :city]]
 
+   (map (fn [[pr & pth]]
+          (str "'" (name pr) ":' || coalesce((resource#>>'{" (str/join "," (mapv (fn [x] (if (keyword? x) (name x) (str x))) pth)) "}'), '')")))
+   (str/join " || ' ' || ")))
 
+(defn debug-expr []
+  (jdbc/query  db [(format "select %s from practitioner limit 10" search-expression)]))
 
-(name-cond "david")
+(comment (debug-expr))
 
-(defn index []
-  (str
-   "
-create extension if not exists pg_trgm;
-CREATE INDEX trgm_idx ON practitioner USING GIST (
-( " names-expr "  )
- gist_trgm_ops )"
-   ))
+(def trgrm_idx
+  (format " CREATE INDEX pract_trgm_idx ON practitioner USING GIST ((%s) gist_trgm_ops);" search-expression))
 
+;; trgrm_idx
 
 (defn migrate []
-  (when-not (first (jdbc/query db "select c.relname from pg_index i, pg_class c  where c.oid = i.indexrelid and c.relname = 'trgm_idx'"))
-    (jdbc/execute! db (index))
-    (try
-      (jdbc/query db "vacuum (analyze) practitioner")
-      (catch Exception e (println "vacuum")))))
+  #_(jdbc/execute! db "DROP INDEX pract_trgm_idx;")
+  #_(jdbc/execute! db trgrm_idx))
 
 (comment
-  (jdbc/execute! db "drop index trgm_idx")
 
-  (index)
   (migrate)
 
   )
 
+(def to-resource-expr "(resource || jsonb_build_object('id', id, 'resourceType', 'Practitioner'))")
 
-(defn elements [els rs]
-  (if-not els
-    rs
-    (let [els (->> (str/split els #"\s*,\s*")
-                   (map keyword))]
-      (mapv (fn [x] (select-keys x els)) rs))))
-
-(defn limit [x y]
-  (str " limit " (or x y)))
-
-(defn get-practitioners [{params :params :as req}]
-  (if-not (:name params)
-    {:status 422
-     :body {:message "Please provide name="
-            :example "?name=albert%20avila&_format=yaml&_elements=name,id&_count=100"}}
-    (let [sql (str 
-               "select * from practitioner where "
-               (name-cond (:name params))
-               (limit (:_count params) 100))]
-      (println sql)
-      {:status 200
-       :body (->>
-              (time (jdbc/query db sql))
-              (mapv to-practitioner)
-              (elements (:_elements params)))})))
+(def practitioner-by-id-sql
+  (format " select %s::text as resource from practitioner where id = ? " to-resource-expr))
 
 (defn get-practitioner [{{npi :npi} :route-params :as req}]
-  {:status 200
-   :body (->>
-          (time (jdbc/query db ["select * from practitioner where npi = ?" npi]))
-          first
-          to-practitioner)})
+  (println "get pracititioner:" npi)
+  (if-let [pr (time (:resource (first (jdbc/query db [practitioner-by-id-sql npi]))))]
+    {:status 200 :body pr}
+    {:status 404 :body (str "Practitioner with id = " npi " not found")}))
+
+(defn get-practitioners-query [{nm :name st :state cnt :_count}]
+  (let [cond (cond-> []
+               nm (into (->> (str/split nm #"\s+")
+                          (remove str/blank?)
+                          (mapv #(format "%s ilike '%%:%s%%'" search-expression %))))
+               st (conj (format "%s ilike '%%s:%s %%'" search-expression st)))]
+    (format "
+select jsonb_build_object('entry', jsonb_agg(row_to_json(x.*)))::text as bundle
+from (select %s as resource from practitioner where %s limit %s) x"
+            to-resource-expr
+            (if (not (empty? cond))
+              (str/join " AND " cond)
+              " true = true ")
+            (or cnt "100"))))
+
+(defn get-pracitioners [{params :params :as req}]
+  (let [q (get-practitioners-query params)
+        _ (println q)
+        prs (jdbc/query db [q])]
+    {:status 200
+     :body (:bundle (first prs))}))
+
 
 (defn get-practitioners-by-ids [{params :params :as req}]
   (if-let [ids  (:ids params)]
-    (let [sql (format "select * from practitioner where npi in (%s)"
-                  (->> (str/split ids #"\s*,\s*")
-                      (mapv (fn [id] (str "'" (sanitize id) "'")))
-                      (str/join ",")))]
+    (let [sql (format "select %s as resource from practitioner where id in (%s)"
+                      to-resource-expr
+                      (->> (str/split ids #"\s*,\s*")
+                           (mapv (fn [id] (str "'" (sanitize id) "'")))
+                           (str/join ",")))]
       (println sql)
       {:status 200
-       :body (->>
-              (time (jdbc/query db sql))
-              (mapv to-practitioner))})
+       :body (->> (time (mapv :resource (jdbc/query db sql))))})
     {:status 422
      :body {:message "ids parameter requried"}}))
 
 
+(comment
+
+
+  
+
+  (spit "/tmp/test.sql"
+        (get-practitioners-query {:name "dave hol" :state "NY"})
+        )
+  
+
+  ()
+
+  (jdbc/execute! db "create extension pg_trgm")
+
+  
+
+  (jdbc/execute!
+   db
+   "
+CREATE UNIQUE INDEX CONCURRENTLY practitioner_idx ON practitioner (id);
+ALTER TABLE practitioner ADD CONSTRAINT practitioner_pkey PRIMARY KEY USING INDEX practitioner_idx;
+"
+   {:transaction? false}
+
+   )
+
+
+  )
