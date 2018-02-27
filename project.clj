@@ -11,6 +11,7 @@
                  [cheshire "5.6.3"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.postgresql/postgresql "9.4.1211.jre7"]
+                 [dk.ative/docjure "1.12.0"]
                  [honeysql "0.9.1"]
                  [ring "1.5.1"]
                  [route-map "0.0.6"]
