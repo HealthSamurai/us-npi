@@ -2,23 +2,17 @@
   (:require [usnpi.db :as db]
             [clojure.tools.logging :as log]))
 
-(def ^:private
-  state (atom false))
-
-(def ^:private
-  timeout (* 1000 60 10))
-
-(defn- error!
+(defn- raise!
   ([msg]
    (throw (Exception. msg)))
   ([tpl & args]
-   (error! (apply format tpl args))))
+   (raise! (apply format tpl args))))
 
 (defn- epoch []
   (quot (System/currentTimeMillis) 1000))
 
 (defn- get-handler [task]
-  (-> task :task resolve))
+  (-> task :task symbol resolve))
 
 (defn- get-next-time [task]
   (+ (epoch) (:interval task)))
@@ -56,10 +50,16 @@
 (defn- run-task [task]
   (if-let [handler (get-handler task)]
     (do
+      (log/infof "Starting task: %s" (:task task))
       (task-running task)
+
       (handler)
-      (task-success task))
-    (error! "Cannot resolve a task: %s" task)))
+
+      (log/infof "Task is done: %s" (:task task))
+      (task-success task)
+      nil)
+
+    (raise! "Cannot resolve a task: %s" (:task task))))
 
 (defn- process-task [task]
   (let [row (get-task task)]
@@ -73,6 +73,16 @@
       (< (:next_run_at row) (epoch))
       (run-task task))))
 
+;;
+;; beat
+;;
+
+(def ^:private
+  state (atom false))
+
+(def ^:private
+  timeout (* 1000 60 10))
+
 (defn- beat [tasks]
   (while @state
     (doseq [task tasks]
@@ -80,11 +90,12 @@
         (try
           (process-task task)
           (catch Throwable e
+            (log/error e "Uncaught exception")
             (task-failure task e)))))
     (Thread/sleep timeout)))
 
 ;;
-;; public part
+;; public api
 ;;
 
 (def default-tasks
@@ -97,7 +108,7 @@
 
   ([tasks]
    (when @state
-     (error! "The schedule beat has been already run."))
+     (raise! "The schedule beat has been already run."))
    (reset! state true)
    (log/info "Beat started.")
    (future (beat tasks))
