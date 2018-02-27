@@ -4,15 +4,15 @@
 
 (def ^:private
   migrations
-  [{:name "Add schedule table"
+  [{:name "Add tasks table"
     :sql "
-CREATE TABLE IF NOT EXISTS schedule (
-    id       serial primary key,
-    task     text not null,
-    run_last timestamp null,
-    run_next timestamp null,
-    success  boolean not null default false,
-    message  text not null default ''
+CREATE TABLE IF NOT EXISTS tasks (
+    id          serial primary key,
+    task        text not null unique,
+    last_run_at timestamp null,
+    next_run_at timestamp null,
+    success     boolean not null default false,
+    message     text not null default ''
 );"}])
 
 (defn migrate []
