@@ -1,7 +1,8 @@
 (ns usnpi.core
   (:gen-class)
-  (:require [usnpi.sync :as sync] 
+  (:require [usnpi.sync :as sync]
             [usnpi.npi :as npi]
+            [usnpi.migrate :as migrate]
             [ring.util.codec]
             [ring.util.io]
             [org.httpkit.server :as server]
@@ -59,6 +60,7 @@
 
 (defn start [& [port]]
   (npi/migrate)
+  (migrate/migrate)
   (server/run-server (cors-mw #'index) {:port (or port 8080)}))
 
 (defn -main [& _]
@@ -73,5 +75,3 @@
   (srv)
 
   )
-
-
