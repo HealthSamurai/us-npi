@@ -9,13 +9,13 @@
            java.util.zip.ZipInputStream))
 
 (def ^:private
-  base-url "http://download.cms.gov")
+  path-base "http://download.cms.gov/nppes/")
 
 (def ^:private
-  path-dl "/nppes/NPI_Files.html")
+  path-dl "NPI_Files.html")
 
 (defn- parse-page []
-  (-> (str base-url path-dl)
+  (-> (str path-base path-dl)
       client/get
       :body
       hickory.core/parse
@@ -35,55 +35,26 @@
   dissem-selector
   (link-selector "NPPES Data Dissemination - Weekly Update"))
 
-(defn- fix-href [href]
-  (if (= \. (first href))
-    (subs href 1)
-    href))
-
 (defn- full-url [href]
-  (str base-url (fix-href href))  )
+  (str path-base href))
 
 (defn- get-deactive-url [htree]
   (when-let [node (first (s/select deactive-selector htree))]
     (let [href (-> node :attrs :href)]
       (full-url href))))
 
-
-(defn- dl-deact-file []
-
-
-  )
-
 ;; "http://download.cms.gov/nppes/NPPES_Deactivated_NPI_Report_021318.zip"
 
-(defn- dl-deact-file [url]
-  (let [resp (client/get url {:as :stream})
+(defn- dl-deact-file [deactive-url]
+  (let [resp (client/get deactive-url {:as :stream})
         zip-stream (ZipInputStream. (:body resp))
         zip-entry (.getNextEntry zip-stream)
         wb (xls/load-workbook zip-stream)
         sheet (first (xls/sheet-seq wb))
         cell (xls/select-columns {:A :npi} sheet)
+        header 2]
+    (take 10 (map :npi (drop header cell)))))
 
-        ]
-
-    (take 10 (map :npi (drop 2 cell)))
-
-    )
-
-  )
-
-
-(defn- read-deact-file [filepath]
-
-  (let [wb (xls/load-workbook filepath)
-        sheet (first (xls/sheet-seq wb))
-        cell (xls/select-columns {:A :npi} sheet)]
-    (mapv :npi (drop 2 cell)))
-
-
-  )
 
 (defn task []
-
-
   :todo)
