@@ -14,40 +14,64 @@
   ([tpl & args]
    (error! (apply format tpl args))))
 
+(defn- epoch []
+  (quot (System/currentTimeMillis) 1000))
+
 (defn- get-handler [task]
   (-> task :task resolve))
 
 (defn- get-next-time [task]
-  (+ 1 2 3)) ;; todo
+  (+ (epoch) (:interval task)))
 
 (defn- update-task [task fields]
   (db/update! :tasks fields ["task = ?" (:task task)]))
+
+(defn- task-running [task]
+  (update-task task {:message "Task is running..."
+                     :last_run_at (epoch)}))
 
 (defn- task-success [task]
   (update-task task {:success true
                      :message "Successfully run."
                      :next_run_at (get-next-time task)}))
 
-(defn- task-failure [task e]
+(defn- exc-msg [e]
   (let [class (-> e .getClass .getCanonicalName)
-        message (-> e .getMessage (or "<no message>"))
-        explain (format "Exception: %s %s" class message)]
-    (update-task task {:success false
-                       :message explain
-                       :next_run_at (get-next-time task)})))
+        message (-> e .getMessage (or "<no message>"))]
+    (format "Exception: %s %s" class message)))
+
+(defn- task-failure [task e]
+  (update-task task {:success false
+                     :message (exc-msg e)
+                     :next_run_at (get-next-time task)}))
 
 (defn- get-task [task]
   (first (db/find-by-keys :tasks {:task (:task task)})))
 
 (defn- create-task [task]
   (db/insert! :tasks {:task (:task task)
-                      :next_run_at #inst "2017"
-                      :message "Task scheduled."}))
+                      :message "Task created."
+                      :next_run_at (get-next-time task)}))
+
+(defn- run-task [task]
+  (if-let [handler (get-handler task)]
+    (do
+      (task-running task)
+      (handler)
+      (task-success task))
+    (error! "Cannot resolve a task: %s" task)))
 
 (defn- process-task [task]
-  (if-let [handler (get-handler task)]
-    (handler)
-    (error! "Cannot resolve a task: %s" task)))
+  (let [row (get-task task)]
+    (cond
+
+      (nil? row)
+      (do
+        (create-task task)
+        (run-task task))
+
+      (< (:next_run_at row) (epoch))
+      (run-task task))))
 
 (defn- beat [tasks]
   (while @state
@@ -55,7 +79,6 @@
       (future
         (try
           (process-task task)
-          (task-success task)
           (catch Throwable e
             (task-failure task e)))))
     (Thread/sleep timeout)))
