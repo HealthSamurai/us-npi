@@ -8,9 +8,10 @@
     :sql "
 CREATE TABLE IF NOT EXISTS tasks (
     id          serial primary key,
-    task        text not null unique,
-    last_run_at integer not null default 0,
-    next_run_at integer not null default 0,
+    handler     text not null,
+    interval    integer not null default 0,
+    last_run_at timestamp with time zone null,
+    next_run_at timestamp with time zone not null,
     success     boolean not null default false,
     message     text not null default ''
 );"}])

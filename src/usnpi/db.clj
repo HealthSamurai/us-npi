@@ -1,6 +1,7 @@
 (ns usnpi.db
   (:require [clojure.java.jdbc :as jdbc]
             [honeysql.core :as sql]
+            [clj-time.jdbc]
             [environ.core :as env]))
 
 (def ^:private

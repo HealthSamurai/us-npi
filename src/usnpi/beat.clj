@@ -1,5 +1,6 @@
 (ns usnpi.beat
   (:require [usnpi.db :as db]
+            [clj-time.core :as t]
             [clojure.tools.logging :as log]))
 
 (defn- raise!
@@ -8,21 +9,18 @@
   ([tpl & args]
    (raise! (apply format tpl args))))
 
-(defn- epoch []
-  (quot (System/currentTimeMillis) 1000))
-
 (defn- get-handler [task]
-  (-> task :task symbol resolve))
+  (-> task :handler symbol resolve))
 
 (defn- get-next-time [task]
-  (+ (epoch) (:interval task)))
+  (t/plus (t/now) (t/seconds (:interval task))))
 
 (defn- update-task [task fields]
-  (db/update! :tasks fields ["task = ?" (:task task)]))
+  (db/update! :tasks fields ["id = ?" (:id task)]))
 
 (defn- task-running [task]
   (update-task task {:message "Task is running..."
-                     :last_run_at (epoch)}))
+                     :last_run_at (t/now)}))
 
 (defn- task-success [task]
   (update-task task {:success true
@@ -39,80 +37,58 @@
                      :message (exc-msg e)
                      :next_run_at (get-next-time task)}))
 
-(defn- get-task [task]
-  (first (db/find-by-keys :tasks {:task (:task task)})))
-
-(defn- create-task [task]
-  (db/insert! :tasks {:task (:task task)
-                      :message "Task created."
-                      :next_run_at (get-next-time task)}))
-
-(defn- run-task [task]
-  (if-let [handler (get-handler task)]
-    (do
-      (log/infof "Starting task: %s" (:task task))
-      (task-running task)
-
-      (handler)
-
-      (log/infof "Task is done: %s" (:task task))
-      (task-success task)
-      nil)
-
-    (raise! "Cannot resolve a task: %s" (:task task))))
-
 (defn- process-task [task]
-  (let [row (get-task task)]
-    (cond
-
-      (nil? row)
-      (do
-        (create-task task)
-        (run-task task))
-
-      (< (:next_run_at row) (epoch))
-      (run-task task))))
+  (if-let [handler (get-handler task)]
+    (handler)
+    (raise! "Cannot resolve a task: %s" (:handler task))))
 
 ;;
 ;; beat
 ;;
 
-(def ^:private
+(defonce ^:private
   state (atom false))
 
 (def ^:private
-  timeout (* 1000 60 10))
+  timeout (* 1000 10))
 
-(defn- beat [tasks]
+(defn- beat []
   (while @state
-    (doseq [task tasks]
-      (future
-        (try
-          (process-task task)
-          (catch Throwable e
-            (log/error e "Uncaught exception")
-            (task-failure task e)))))
+    (let [sqlmap {:select [:*]
+                  :from [:tasks]
+                  :where [:< :next_run_at (t/now)]}
+          tasks (db/query (db/to-sql sqlmap))]
+      (doseq [task tasks]
+        (future
+          (try
+            (task-running task)
+            (log/infof "Starting task: %s" (:handler task))
+            (process-task task)
+            (log/infof "Task is done: %s" (:handler task))
+            (task-success task)
+            (catch Throwable e
+              (log/error e "Uncaught exception")
+              (task-failure task e))))))
     (Thread/sleep timeout)))
 
 ;;
 ;; public api
 ;;
 
-(def default-tasks
-  [{:task "usnpi.updater/task"
-    :interval (* 60 60)}])
+(defn seed-task
+  [handler interval]
+  (db/insert! :tasks {:handler handler
+                      :interval interval
+                      :next_run_at (t/now)
+                      :message "Task created."}))
 
-(defn start
-  ([]
-   (start default-tasks))
-
-  ([tasks]
-   (when @state
-     (raise! "The schedule beat has been already run."))
-   (reset! state true)
-   (log/info "Beat started.")
-   (future (beat tasks))
-   nil))
+(defn start []
+  (when @state
+    (raise! "The schedule beat has been already run."))
+  (reset! state true)
+  (log/info "Beat started.")
+  (future (beat))
+  nil)
 
 (defn stop []
   (reset! state false)
