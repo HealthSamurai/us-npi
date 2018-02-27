@@ -23,6 +23,9 @@
 (defn insert! [& args]
   (apply jdbc/insert! *db* args))
 
+(defn create! [& args]
+  (first (apply insert! args)))
+
 (defn update! [& args]
   (apply jdbc/update! *db* args))
 
