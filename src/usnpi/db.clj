@@ -14,6 +14,15 @@
 (defn query [& args]
   (apply jdbc/query *db* args))
 
+(defn get-by-id [& args]
+  (apply jdbc/get-by-id *db* args))
+
+(defn find-by-keys [& args]
+  (apply jdbc/find-by-keys *db* args))
+
+(defn insert! [& args]
+  (apply jdbc/insert! *db* args))
+
 (defn update! [& args]
   (apply jdbc/update! *db* args))
 
