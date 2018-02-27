@@ -1,5 +1,6 @@
 (ns usnpi.db
   (:require [clojure.java.jdbc :as jdbc]
+            [honeysql.core :as sql]
             [environ.core :as env]))
 
 (def ^:private
@@ -7,9 +8,12 @@
   db-url "jdbc:postgresql://localhost:5432/usnpi?stringtype=unspecified&user=usnpi&password=usnpi"
   )
 
-(def ^:private ^:dynamic
+(def ^:dynamic
   *db* {:dbtype "postgresql"
         :connection-uri (or (env/env :database-url) db-url)})
+
+(defn to-sql [sqlmap]
+  (sql/format sqlmap))
 
 (defn query [& args]
   (apply jdbc/query *db* args))
@@ -21,10 +25,10 @@
   (apply jdbc/find-by-keys *db* args))
 
 (defn insert! [& args]
-  (apply jdbc/insert! *db* args))
+  (first (apply jdbc/insert! *db* args)))
 
-(defn create! [& args]
-  (first (apply insert! args)))
+(defn insert-multi! [& args]
+  (apply jdbc/insert-multi! *db* args))
 
 (defn update! [& args]
   (apply jdbc/update! *db* args))
@@ -35,12 +39,12 @@
 (defn execute! [& args]
   (apply jdbc/execute! *db* args))
 
-(defmacro with-trx [& body]
+(defmacro with-tx [& body]
   `(jdbc/with-db-transaction [tx# *db*]
      (binding [*db* tx#]
        ~@body)))
 
-(defmacro with-trx-test [& body]
+(defmacro with-tx-test [& body]
   `(with-trx
      (jdbc/db-set-rollback-only! *db*)
      ~@body))
