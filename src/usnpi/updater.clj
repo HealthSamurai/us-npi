@@ -38,23 +38,44 @@
 (defn- full-url [href]
   (str path-base href))
 
-(defn- get-deactive-url [htree]
-  (when-let [node (first (s/select deactive-selector htree))]
+(defn- get-deactive-url [page]
+  (when-let [node (first (s/select deactive-selector page))]
     (let [href (-> node :attrs :href)]
       (full-url href))))
 
 ;; "http://download.cms.gov/nppes/NPPES_Deactivated_NPI_Report_021318.zip"
 
-(defn- dl-deact-file [deactive-url]
-  (let [resp (client/get deactive-url {:as :stream})
-        zip-stream (ZipInputStream. (:body resp))
-        zip-entry (.getNextEntry zip-stream)
-        wb (xls/load-workbook zip-stream)
+(defn- get-deactive-stream [url]
+  (let [resp (client/get url {:as :stream})
+        stream (ZipInputStream. (:body resp))]
+    (doto stream .getNextEntry)))
+
+(defn- read-deactive-npis [source]
+  (let [wb (xls/load-workbook source)
         sheet (first (xls/sheet-seq wb))
         cell (xls/select-columns {:A :npi} sheet)
         header 2]
     (take 10 (map :npi (drop header cell)))))
 
+(defn- by-chunks [n seq]
+  (partition n n [] seq))
 
-(defn task []
-  :todo)
+(defn- mark-npi-deleted [npis-all]
+  (db/with-tx
+    (doseq [npis (by-chunks 100 npis-all)]
+      (db/execute!
+       (db/to-sql
+        {:update :practitioner
+         :set {:deleted true}
+         :where [:in :npi npis]})))))
+
+(defn task-deactivate []
+  (let [page (parse-page)
+        url (get-deactive-url page)
+        stream (get-deactive-stream url)
+        npis (read-deactive-npis stream)]
+    (mark-npi-deleted npis)
+    nil))
+
+(defn task-dissemination []
+  )
