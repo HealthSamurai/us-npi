@@ -2,9 +2,35 @@
   (:require [usnpi.db :as db]
             [clojure.tools.logging :as log]
             [dk.ative.docjure.spreadsheet :as xls]
-            [clj-http.client :as client])
+            [clj-http.client :as client]
+            [hickory.core :as hickory]
+            [hickory.select :as select])
   (:import java.util.zip.ZipEntry
            java.util.zip.ZipInputStream))
+
+(def ^:private
+  dl-url "http://download.cms.gov/nppes/NPI_Files.html")
+
+(defn- parse-dl-page []
+  (-> dl-url
+      client/get
+      :body
+      hickory.core/parse
+      hickory.core/as-hickory
+
+
+      )
+
+  )
+
+(defn- parse-link [htree]
+  (select/select
+   (select/and
+    (select/tag :a)
+    (select/find-in-text #"NPPES Data Dissemination - Monthly Deactivation Update"))
+    htree)
+
+  )
 
 (defn- dl-deact-file []
 
