@@ -9,8 +9,8 @@
 CREATE TABLE IF NOT EXISTS tasks (
     id          serial primary key,
     task        text not null unique,
-    last_run_at timestamp null,
-    next_run_at timestamp null,
+    last_run_at integer not null default 0,
+    next_run_at integer not null default 0,
     success     boolean not null default false,
     message     text not null default ''
 );"}])
