@@ -21,16 +21,33 @@
       hickory.core/parse
       hickory.core/as-hickory))
 
-(def ^:private
-  deactive-selector
+(defn- link-selector
+  [text]
   (s/and
    (s/tag :a)
-   (s/find-in-text #"NPPES Data Dissemination - Monthly Deactivation Update")))
+   (s/find-in-text (re-pattern text))))
+
+(def ^:private
+  deactive-selector
+  (link-selector "NPPES Data Dissemination - Monthly Deactivation Update"))
+
+(def ^:private
+  dissem-selector
+  (link-selector "NPPES Data Dissemination - Weekly Update"))
+
+(defn- fix-href [href]
+  (if (= \. (first href))
+    (subs href 1)
+    href))
+
+(defn- full-url [href]
+  (str base-url (fix-href href))  )
 
 (defn- get-deactive-url [htree]
   (when-let [node (first (s/select deactive-selector htree))]
     (let [href (-> node :attrs :href)]
-      (str base-url href))))
+      (full-url href))))
+
 
 (defn- dl-deact-file []
 
