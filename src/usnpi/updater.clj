@@ -4,33 +4,33 @@
             [dk.ative.docjure.spreadsheet :as xls]
             [clj-http.client :as client]
             [hickory.core :as hickory]
-            [hickory.select :as select])
+            [hickory.select :as s])
   (:import java.util.zip.ZipEntry
            java.util.zip.ZipInputStream))
 
 (def ^:private
-  dl-url "http://download.cms.gov/nppes/NPI_Files.html")
+  base-url "http://download.cms.gov")
 
-(defn- parse-dl-page []
-  (-> dl-url
+(def ^:private
+  path-dl "/nppes/NPI_Files.html")
+
+(defn- parse-page []
+  (-> (str base-url path-dl)
       client/get
       :body
       hickory.core/parse
-      hickory.core/as-hickory
+      hickory.core/as-hickory))
 
+(def ^:private
+  deactive-selector
+  (s/and
+   (s/tag :a)
+   (s/find-in-text #"NPPES Data Dissemination - Monthly Deactivation Update")))
 
-      )
-
-  )
-
-(defn- parse-link [htree]
-  (select/select
-   (select/and
-    (select/tag :a)
-    (select/find-in-text #"NPPES Data Dissemination - Monthly Deactivation Update"))
-    htree)
-
-  )
+(defn- get-deactive-url [htree]
+  (when-let [node (first (s/select deactive-selector htree))]
+    (let [href (-> node :attrs :href)]
+      (str base-url href))))
 
 (defn- dl-deact-file []
 
