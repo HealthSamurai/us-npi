@@ -90,20 +90,20 @@
                       :next_run_at (next-time interval)
                       :message "Task created."}))
 
-(defn start []
+(defn status []
   (let [f @state]
-    (if (or (nil? f) (and (future? f) (finished? f)))
-      (do
-        (reset! state (future (beat)))
-        (log/info "Beat started."))
+    (and (future? f) (not (finished? f)))))
 
-      (raise! "The beat wasn't stopped properly."))))
+(defn start []
+  (if-not (status)
+    (do
+      (reset! state (future (beat)))
+      (log/info "Beat started."))
+    (raise! "The beat wasn't stopped properly.")))
 
 (defn stop []
-  (let [f @state]
-    (if (and (future? f) (not (finished? f)))
-      (do
-        (future-cancel f)
-        (log/info "Beat stopped."))
-
-      (raise! "The beat was not started or is already stopped."))))
+  (if (status)
+    (do
+      (future-cancel @state)
+      (log/info "Beat stopped."))
+    (raise! "The beat was not started or is already stopped.")))
