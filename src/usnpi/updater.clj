@@ -1,6 +1,8 @@
 (ns usnpi.updater
   (:require [usnpi.db :as db]
             [usnpi.util :refer [raise!] :as util]
+            [usnpi.sync :as sync]
+            [clojure.java.io :as io] ;; todo
             [clojure.tools.logging :as log]
             [clojure.string :as str]
             [dk.ative.docjure.spreadsheet :as xls]
@@ -125,7 +127,8 @@
         _ (when-not url-zip
             (raise! "Dissemination URL is missing"))
 
-        folder (format "%s-Dissemination" (util/epoch))
+        ts (util/epoch)
+        folder (format "%s-Dissemination" ts)
         zipname (url->name url-zip)
 
         ]
@@ -134,16 +137,23 @@
       (util/curl url-zip zipname)
       (util/unzip zipname))
 
-    (let [csv-path (util/find-file folder re-dissem-csv)
+    (let [path-csv (util/find-file folder re-dissem-csv)
 
-          _ (when-not csv-path
+          _ (when-not path-csv
               (raise! "No CSV Dissemination file found in %s" zipname))
 
-          ;; _ (log/infof "Reading NPIs from %s" xls-path)
-          ;; npis (read-deactive-npis xls-path)
-          ;; _ (log/infof "Found %s NPIs to deactive" (count npis))
+          path-rel (str folder "/" (-> path-csv java.io.File. .getName))
+          table-name (format "temp_%s" ts)
 
+          sql (sync/sql-dissem {:path-csv path-rel
+                                :path-import path-csv
+                                :table-name table-name})
           ]
+
+      (util/in-dir folder
+        (util/spit* "import.sql" sql))
+
+      #_(println rel-path)
 
       ;; (log/infof "Marking NPIs as deleted with a step of %s" db-chunk)
       ;; (mark-npi-deleted npis)
@@ -151,6 +161,6 @@
 
       )
 
-    nil)
+)
 
   )

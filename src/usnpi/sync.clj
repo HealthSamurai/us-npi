@@ -143,6 +143,21 @@ INSERT INTO organization SELECT * FROM practitioner WHERE entity_type_code = '2'
     ")))
 
 
+(defn sql-dissem [{:keys [path-csv
+                          path-import
+                          table-name]}]
+  (let [table-def (h/table-def-from-csv
+                   table-name path-csv {:temp? true})]
+    (h/str-template
+     "
+BEGIN;
+~(table-def)
+COPY ~(table-name) FROM '~(path-import)'
+CSV HEADER NULL '';
+DROP TABLE ~(table-name);
+COMMIT;
+    ")))
+
 (defn init []
   (let [mon (current-month)
         year (str (current-year))
