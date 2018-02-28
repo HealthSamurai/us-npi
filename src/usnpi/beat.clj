@@ -9,11 +9,11 @@
   ([tpl & args]
    (raise! (apply format tpl args))))
 
-(defn- get-handler [task]
+(defn- resolve-func [task]
   (-> task :handler symbol resolve))
 
-(defn- get-next-time [task]
-  (t/plus (t/now) (t/seconds (:interval task))))
+(defn- next-time [secs]
+  (t/plus (t/now) (t/seconds secs)))
 
 (defn- update-task [task fields]
   (db/update! :tasks fields ["id = ?" (:id task)]))
@@ -25,7 +25,7 @@
 (defn- task-success [task]
   (update-task task {:success true
                      :message "Successfully run."
-                     :next_run_at (get-next-time task)}))
+                     :next_run_at (-> task :interval next-time)}))
 
 (defn- exc-msg [e]
   (let [class (-> e .getClass .getCanonicalName)
@@ -35,14 +35,9 @@
 (defn- task-failure [task e]
   (update-task task {:success false
                      :message (exc-msg e)
-                     :next_run_at (get-next-time task)}))
+                     :next_run_at (-> task :interval next-time)}))
 
-(defn- process-task [task]
-  (if-let [handler (get-handler task)]
-    (handler)
-    (raise! "Cannot resolve a task: %s" (:handler task))))
-
-(defn- get-tasks []
+(defn- read-tasks []
   (db/query
    (db/to-sql
     {:select [:*]
@@ -65,18 +60,24 @@
 
 (defn- beat []
   (while true
-    (doseq [task (get-tasks)]
-      (future
-        (try
-          (task-running task)
-          (log/infof "Starting task: %s" (:handler task))
-          (process-task task)
-          (log/infof "Task is done: %s" (:handler task))
-          (task-success task)
-          (catch Throwable e
-            (log/error e "Uncaught exception")
-            (task-failure task e)))))
-    (Thread/sleep timeout)))
+    (try
+      (doseq [{:keys [handler] :as task} (read-tasks)]
+        (future
+          (try
+            (log/infof "Starting task: %s" handler)
+            (task-running task)
+            (if-let [func (resolve-func task)]
+              (func)
+              (raise! "Cannot resolve a task: %s" handler))
+            (log/infof "Task is done: %s" handler)
+            (task-success task)
+            (catch Throwable e
+              (log/error e "Task error: %s" handler)
+              (task-failure task e)))))
+      (catch Throwable e
+        (log/error e "Uncaught exception"))
+      (finally
+        (Thread/sleep timeout)))))
 
 ;;
 ;; public api
@@ -86,7 +87,7 @@
   [handler interval]
   (db/insert! :tasks {:handler handler
                       :interval interval
-                      :next_run_at (t/now)
+                      :next_run_at (next-time interval)
                       :message "Task created."}))
 
 (defn start []
