@@ -1,14 +1,12 @@
 (ns usnpi.updater
   (:require [usnpi.db :as db]
-            [usnpi.util :refer [raise!]]
+            [usnpi.util :refer [raise!] :as util]
             [clojure.tools.logging :as log]
             [clojure.string :as str]
             [dk.ative.docjure.spreadsheet :as xls]
             [clj-http.client :as client]
             [hickory.core :as hickory]
-            [hickory.select :as s])
-  (:import java.util.zip.ZipEntry
-           java.util.zip.ZipInputStream))
+            [hickory.select :as s]))
 
 (def ^:private
   db-chunk 100)
@@ -53,28 +51,6 @@
     (let [href (-> node :attrs :href)]
       (full-url href))))
 
-(defn- ^ZipInputStream get-stream
-  [url]
-  (let [resp (client/get url {:as :stream})]
-    (ZipInputStream. (:body resp))))
-
-(defn- matches-ext [filename ext]
-  (str/ends-with? (str/lower-case filename) (str/lower-case ext)))
-
-(defn- seek-stream
-  [^ZipInputStream stream ^java.util.regex.Pattern re]
-  (loop []
-    (if-let [entry (.getNextEntry stream)]
-      (let [filename (.getName entry)]
-        (if (re-matches re filename)
-          stream
-          (recur)))
-      (raise! "Cannot find a file by regex %s" re))))
-
-(defn- seek-deactive-stream
-  [^ZipInputStream stream]
-  (.getNextEntry stream))
-
 (defn- read-deactive-npis [source]
   (let [wb (xls/load-workbook source)
         sheet (first (xls/sheet-seq wb))
@@ -94,6 +70,9 @@
          :set {:deleted true}
          :where [:in :id npis]})))))
 
+(defn- url->name [url]
+  (last (str/split url #"/")))
+
 (def ^:private
   re-xlsx #".*(?i)\.xlsx$")
 
@@ -109,20 +88,25 @@
         _ (when-not url-zip
             (raise! "Deactivation URL is missing"))
 
-        stream (get-stream url-zip)
+        folder (format "%s-Deactivation" (util/epoch))
+        zipname (url->name url-zip)]
 
-        _ (log/infof "Seeking stream for an Excel file...")
-        stream (seek-stream stream re-xlsx)
+    (util/in-dir folder
+      (util/curl url-zip zipname)
+      (util/unzip zipname))
 
-        _ (log/infof "Reading NPIs from a file...")
-        npis (read-deactive-npis stream)
-        _ (log/infof "Found %s NPIs to deactive" (count npis))
+    (let [xls-path (util/find-file folder re-xlsx)
 
-        ]
+          _ (when-not xls-path
+              (raise! "No Excel file found in %s" zipname))
 
-    (log/infof "Marking NPIs as deleted with a step of %s" db-chunk)
-    (mark-npi-deleted npis)
-    (log/infof "Done.")
+          _ (log/infof "Reading NPIs from %s" xls-path)
+          npis (read-deactive-npis xls-path)
+          _ (log/infof "Found %s NPIs to deactive" (count npis))]
+
+      (log/infof "Marking NPIs as deleted with a step of %s" db-chunk)
+      (mark-npi-deleted npis)
+      (log/infof "Done."))
 
     nil))
 
@@ -138,11 +122,8 @@
         _ (when-not url-zip
             (raise! "Dissemination URL is missing"))
 
-
         ]
 
-
     nil)
-
 
   )
