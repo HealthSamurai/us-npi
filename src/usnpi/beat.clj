@@ -42,6 +42,13 @@
     (handler)
     (raise! "Cannot resolve a task: %s" (:handler task))))
 
+(defn- get-tasks []
+  (db/query
+   (db/to-sql
+    {:select [:*]
+     :from [:tasks]
+     :where [:< :next_run_at (t/now)]})))
+
 ;;
 ;; beat
 ;;
@@ -54,21 +61,17 @@
 
 (defn- beat []
   (while @state
-    (let [sqlmap {:select [:*]
-                  :from [:tasks]
-                  :where [:< :next_run_at (t/now)]}
-          tasks (db/query (db/to-sql sqlmap))]
-      (doseq [task tasks]
-        (future
-          (try
-            (task-running task)
-            (log/infof "Starting task: %s" (:handler task))
-            (process-task task)
-            (log/infof "Task is done: %s" (:handler task))
-            (task-success task)
-            (catch Throwable e
-              (log/error e "Uncaught exception")
-              (task-failure task e))))))
+    (doseq [task (get-tasks)]
+      (future
+        (try
+          (task-running task)
+          (log/infof "Starting task: %s" (:handler task))
+          (process-task task)
+          (log/infof "Task is done: %s" (:handler task))
+          (task-success task)
+          (catch Throwable e
+            (log/error e "Uncaught exception")
+            (task-failure task e)))))
     (Thread/sleep timeout)))
 
 ;;
