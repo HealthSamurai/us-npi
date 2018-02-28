@@ -166,5 +166,5 @@
 
 (defn find-file [path re]
   (some
-   #(re-matches re (.getAbsolutePath %))
+   #(re-find re (.getAbsolutePath %))
    (file-seq* path)))

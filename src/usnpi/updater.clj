@@ -74,7 +74,10 @@
   (last (str/split url #"/")))
 
 (def ^:private
-  re-xlsx #".*(?i)\.xlsx$")
+  re-any-xlsx #"(?i)\.xlsx$")
+
+(def ^:private
+  re-dissem-csv #"(?i)npidata_pfile.+?\.csv$")
 
 (defn task-deactivate []
   (let [url-page (str path-base path-dl)
@@ -95,7 +98,7 @@
       (util/curl url-zip zipname)
       (util/unzip zipname))
 
-    (let [xls-path (util/find-file folder re-xlsx)
+    (let [xls-path (util/find-file folder re-any-xlsx)
 
           _ (when-not xls-path
               (raise! "No Excel file found in %s" zipname))
@@ -122,7 +125,31 @@
         _ (when-not url-zip
             (raise! "Dissemination URL is missing"))
 
+        folder (format "%s-Dissemination" (util/epoch))
+        zipname (url->name url-zip)
+
         ]
+
+    (util/in-dir folder
+      (util/curl url-zip zipname)
+      (util/unzip zipname))
+
+    (let [csv-path (util/find-file folder re-dissem-csv)
+
+          _ (when-not csv-path
+              (raise! "No CSV Dissemination file found in %s" zipname))
+
+          ;; _ (log/infof "Reading NPIs from %s" xls-path)
+          ;; npis (read-deactive-npis xls-path)
+          ;; _ (log/infof "Found %s NPIs to deactive" (count npis))
+
+          ]
+
+      ;; (log/infof "Marking NPIs as deleted with a step of %s" db-chunk)
+      ;; (mark-npi-deleted npis)
+      ;; (log/infof "Done.")
+
+      )
 
     nil)
 
