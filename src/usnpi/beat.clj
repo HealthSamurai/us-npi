@@ -54,13 +54,17 @@
 ;;
 
 (defonce ^:private
-  state (atom false))
+  state (atom nil))
 
 (def ^:private
-  timeout (* 1000 10))
+  timeout (* 1000 60 30))
+
+(defn- finished? [f]
+  (or (future-cancelled? f)
+      (future-done? f)))
 
 (defn- beat []
-  (while @state
+  (while true
     (doseq [task (get-tasks)]
       (future
         (try
@@ -86,14 +90,19 @@
                       :message "Task created."}))
 
 (defn start []
-  (when @state
-    (raise! "The schedule beat has been already run."))
-  (reset! state true)
-  (log/info "Beat started.")
-  (future (beat))
-  nil)
+  (let [f @state]
+    (if (or (nil? f) (and (future? f) (finished? f)))
+      (do
+        (reset! state (future (beat)))
+        (log/info "Beat started."))
+
+      (raise! "The beat wasn't stopped properly."))))
 
 (defn stop []
-  (reset! state false)
-  (log/info "Beat stopped.")
-  nil)
+  (let [f @state]
+    (if (and (future? f) (not (finished? f)))
+      (do
+        (future-cancel f)
+        (log/info "Beat stopped."))
+
+      (raise! "The beat was not started or is already stopped."))))
