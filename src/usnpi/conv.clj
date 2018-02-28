@@ -37,7 +37,7 @@
     (->
      (reduce-separted "," (fn [acc [k v]]
                             (let [acc (conj acc (str "'" (name k) "',"))]
-                              (to-sql acc v)) 
+                              (to-sql acc v))
                             ) acc m)
      (conj "))"))))
 
@@ -152,16 +152,18 @@
                                                                  }]}}}))
                     (into []))})
 
+(def sql-resource
+  (str/join "\n" (to-sql [] conv)))
+
 (comment
   (spit "/Users/nicola/usnpi/build/npi/tojson.sql"
         (str
          " truncate practitioner_json; \n"
          "insert into practitioner_json (id,resource) \n select npi, \n"
-         (str/join " " (to-sql [] conv))
+         sql-resource
          "\nfrom original
 where entity_type_code = '1'
 --limit 10000
 "))
 
   )
-

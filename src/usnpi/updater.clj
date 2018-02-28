@@ -129,9 +129,7 @@
 
         ts (util/epoch)
         folder (format "%s-Dissemination" ts)
-        zipname (url->name url-zip)
-
-        ]
+        zipname (url->name url-zip)]
 
     (util/in-dir folder
       (util/curl url-zip zipname)
@@ -148,19 +146,15 @@
           sql (sync/sql-dissem {:path-csv path-rel
                                 :path-import path-csv
                                 :table-name table-name})
-          ]
+
+          sql-name "dissemination.sql"
+          sql-path (str folder "/" sql-name)]
 
       (util/in-dir folder
-        (util/spit* "import.sql" sql))
+        (util/spit* sql-name sql))
+      (log/infof "Dissemination SQL is %s" sql-path)
 
-      #_(println rel-path)
+      (log/infof "Running dissemination SQL againts the DB")
+      (db/execute! sql)))
 
-      ;; (log/infof "Marking NPIs as deleted with a step of %s" db-chunk)
-      ;; (mark-npi-deleted npis)
-      ;; (log/infof "Done.")
-
-      )
-
-)
-
-  )
+  nil)

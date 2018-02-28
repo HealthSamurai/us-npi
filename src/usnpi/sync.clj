@@ -1,5 +1,6 @@
 (ns usnpi.sync
   (:require [usnpi.util :as h]
+            [usnpi.conv :as conv]
             [clojure.string :as str]))
 
 ;; http://download.cms.gov/nppes/NPI_Files.html
@@ -147,14 +148,40 @@ INSERT INTO organization SELECT * FROM practitioner WHERE entity_type_code = '2'
                           path-import
                           table-name]}]
   (let [table-def (h/table-def-from-csv
-                   table-name path-csv {:temp? true})]
+                   table-name path-csv {:temp? true})
+        sql-resource conv/sql-resource
+
+        ]
     (h/str-template
      "
 BEGIN;
+
 ~(table-def)
+
+-- import plain fields
 COPY ~(table-name) FROM '~(path-import)'
 CSV HEADER NULL '';
+
+-- build json nodes into another temp table
+CREATE TEMP table ~(table-name)_json (
+    id text, resource jsonb
+);
+
+INSERT INTO ~(table-name)_json (id, resource)
+SELECT npi, ~(sql-resource)
+FROM ~(table-name)
+WHERE entity_type_code = '1';
+
+-- merge practitioners with new json nodes
+INSERT INTO practitioner (id, resource)
+SELECT id, resource
+FROM ~(table-name)_json
+ON CONFLICT (id) DO UPDATE SET resource = EXCLUDED.resource;
+
+-- drop everything
 DROP TABLE ~(table-name);
+DROP TABLE ~(table-name)_json;
+
 COMMIT;
     ")))
 
