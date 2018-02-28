@@ -48,6 +48,11 @@
     (let [href (-> node :attrs :href)]
       (full-url href))))
 
+(defn- get-dissem-url [page-tree]
+  (when-let [node (last (s/select dissem-selector page-tree))]
+    (let [href (-> node :attrs :href)]
+      (full-url href))))
+
 (defn- ^ZipInputStream get-stream
   [url]
   (let [resp (client/get url {:as :stream})]
@@ -57,14 +62,14 @@
   (str/ends-with? (str/lower-case filename) (str/lower-case ext)))
 
 (defn- seek-stream
-  [^ZipInputStream stream ^String ext]
+  [^ZipInputStream stream ^java.util.regex.Pattern re]
   (loop []
     (if-let [entry (.getNextEntry stream)]
       (let [filename (.getName entry)]
-        (if (matches-ext filename ext)
+        (if (re-matches re filename)
           stream
           (recur)))
-      (raise! "Cannot find a %s file in a stream" ext))))
+      (raise! "Cannot find a file by regex %s" re))))
 
 (defn- seek-deactive-stream
   [^ZipInputStream stream]
@@ -89,6 +94,9 @@
          :set {:deleted true}
          :where [:in :id npis]})))))
 
+(def ^:private
+  re-xlsx #".*(?i)\.xlsx$")
+
 (defn task-deactivate []
   (let [url-page (str path-base path-dl)
 
@@ -99,12 +107,12 @@
         _ (log/infof "Deactivation URL is %s" url-zip)
 
         _ (when-not url-zip
-            (raise! "Deactivation URL doesn't present on the page %s" url-page))
+            (raise! "Deactivation URL is missing"))
 
         stream (get-stream url-zip)
 
         _ (log/infof "Seeking stream for an Excel file...")
-        stream (seek-stream stream ".xlsx")
+        stream (seek-stream stream re-xlsx)
 
         _ (log/infof "Reading NPIs from a file...")
         npis (read-deactive-npis stream)
@@ -119,4 +127,22 @@
     nil))
 
 (defn task-dissemination []
+  (let [url-page (str path-base path-dl)
+
+        _ (log/infof "Parsing %s page..." url-page)
+        page-tree (parse-page url-page)
+
+        url-zip (get-dissem-url page-tree)
+        _ (log/infof "Dissemination URL is %s" url-zip)
+
+        _ (when-not url-zip
+            (raise! "Dissemination URL is missing"))
+
+
+        ]
+
+
+    nil)
+
+
   )
