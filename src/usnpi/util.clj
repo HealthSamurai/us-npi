@@ -14,6 +14,9 @@
   ([tpl & args]
    (raise! (apply format tpl args))))
 
+(defn epoch []
+  (quot (System/currentTimeMillis) 1000))
+
 (defn to-json [x]
   (json/encode x))
 
@@ -160,3 +163,8 @@
 
 (defn file-seq* [path]
   (file-seq (io/file (from-workdir path))))
+
+(defn find-file [path re]
+  (some
+   #(re-matches re (.getAbsolutePath %))
+   (file-seq* path)))
