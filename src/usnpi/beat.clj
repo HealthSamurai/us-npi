@@ -1,13 +1,8 @@
 (ns usnpi.beat
   (:require [usnpi.db :as db]
+            [usnpi.util :refer [raise!]]
             [clj-time.core :as t]
             [clojure.tools.logging :as log]))
-
-(defn- raise!
-  ([msg]
-   (throw (Exception. msg)))
-  ([tpl & args]
-   (raise! (apply format tpl args))))
 
 (defn- resolve-func [task]
   (-> task :handler symbol resolve))

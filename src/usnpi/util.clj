@@ -8,6 +8,12 @@
             [clojure.string :as str])
   (:import java.util.regex.Matcher))
 
+(defn raise!
+  ([msg]
+   (throw (Exception. msg)))
+  ([tpl & args]
+   (raise! (apply format tpl args))))
+
 (defn to-json [x]
   (json/encode x))
 
