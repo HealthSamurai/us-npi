@@ -6,6 +6,37 @@ US NPI registy in FHIR
 
 See deploy folder and ci3.yaml
 
+## Local development
+
+Crate a new Git-ignored `env_local` file:
+
+```bash
+touch env_local
+```
+
+Provide your own Postgres credentials, paths, etc:
+
+```bash
+$ cat env_local
+export DATABASE_URL="jdbc:postgresql://localhost:5432/usnpi?stringtype=unspecified&user=<user>&password=<password>"
+export FHIRTERM_BASE=/path/to/FHIRTERM_BASE
+export BEAT_TIMEOUT=30
+```
+
+Load the config:
+
+```bash
+source env_local
+```
+
+Then run either REPL or the compiled uberjar:
+
+```bash
+lein repl
+# or
+java -jar ./target/usnpi.jar
+```
+
 ## TODO
 
 * Make it autonomous - i.e. save loaded months; check for updates - download and install udpates
