@@ -1,4 +1,4 @@
-(ns usnpi.updater
+(ns usnpi.auto-update
   (:require [usnpi.db :as db]
             [usnpi.util :refer [raise!] :as util]
             [usnpi.sync :as sync]
@@ -177,7 +177,7 @@
                                 :table-name table-name})
 
           sql-name "dissemination.sql"
-          sql-path (str folder "/" sql-name)]
+          sql-path (join-paths folder sql-name)]
 
       (util/in-dir folder
         (util/spit* sql-name sql))
