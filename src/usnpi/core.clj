@@ -5,6 +5,7 @@
             [usnpi.migrate :as migrate]
             [ring.util.codec]
             [ring.util.io]
+            [clojure.tools.logging :as log]
             [org.httpkit.server :as server]
             [clojure.string :as str]
             [route-map.core :as routing]))
@@ -42,8 +43,6 @@
       (f req))))
 
 
-
-
 (defn index [{uri :uri qs :query-string :as req}]
   (println "GET " uri " " qs)
   (if-let [h (routing/match [:get (str/lower-case uri)] routes)]
@@ -59,19 +58,13 @@
      :body (str "Url " (str/lower-case uri) " not found " (keys routes))}))
 
 (defn start [& [port]]
-  (npi/migrate)
   (migrate/migrate)
-  (server/run-server (cors-mw #'index) {:port (or port 8080)}))
+
+  (let [port (or port 8080)]
+    (log/infof "Start server on port %s" port)
+    (server/run-server (cors-mw #'index) {:port port})))
 
 (defn -main [& _]
   #_(sync/init)
   (println "Start server on 8080")
   (start))
-
-
-(comment
-  (def srv (start 8787))
-
-  (srv)
-
-  )
