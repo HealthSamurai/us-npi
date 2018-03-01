@@ -24,7 +24,10 @@
     :interval (* hour 6)
     :offset hour}])
 
-(defn init []
+(defn init
+  "Scans through the declared tasks and adds those of them
+  into the database that are missing. Then stars the beat cycle."
+  []
   (log/info "Seeding regular tasks...")
   (doseq [{:keys [handler interval offset]} tasks]
     (when-not (beat/task-exists? handler)
