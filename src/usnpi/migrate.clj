@@ -1,7 +1,8 @@
 (ns usnpi.migrate
   "Small module to deal with migrations. These are .sql files
   put into resources/migrations folder. Prepend files' names with
-  a prefix for proper ordering."
+  a prefix for proper ordering. Each file should have its own transaction
+  (or several of them) declared explicitly with BEGIN/COMMIT pair."
   (:require [usnpi.db :as db]
             [clojure.string :as s]
             [clojure.java.io :as io]
@@ -40,6 +41,6 @@
 
   (doseq [{:keys [name body]} (read-migrations "migrations")]
     (log/infof "Migration: %s" name)
-    (db/execute! body))
+    (db/execute! body {:transaction? false}))
 
   (log/info "Done."))
