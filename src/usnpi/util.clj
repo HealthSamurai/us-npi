@@ -8,11 +8,11 @@
             [clojure.string :as str])
   (:import java.util.regex.Matcher))
 
-(defn raise!
+(defn error!
   ([msg]
    (throw (Exception. msg)))
   ([tpl & args]
-   (raise! (apply format tpl args))))
+   (error! (apply format tpl args))))
 
 (defn epoch []
   (quot (System/currentTimeMillis) 1000))

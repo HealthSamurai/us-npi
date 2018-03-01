@@ -1,6 +1,6 @@
-(ns usnpi.auto-update
+(ns usnpi.update
   (:require [usnpi.db :as db]
-            [usnpi.util :refer [raise!] :as util]
+            [usnpi.util :refer [error!] :as util]
             [usnpi.sync :as sync]
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]
@@ -105,7 +105,7 @@
   (str/join java.io.File/separator
             (into [path1 path2] more)))
 
-(defn task-deactivate
+(defn task-deactivation
   "A regular task that parses the download page, fetches an Excel file
   and marks the corresponding DB records as deleted."
   []
@@ -118,7 +118,7 @@
         _ (log/infof "Deactivation URL is %s" url-zip)
 
         _ (when-not url-zip
-            (raise! "Deactivation URL is missing"))
+            (error! "Deactivation URL is missing"))
 
         folder (format "%s-Deactivation" (util/epoch))
         zipname (url->name url-zip)]
@@ -130,7 +130,7 @@
     (let [xls-path (util/find-file folder re-any-xlsx)
 
           _ (when-not xls-path
-              (raise! "No Excel file found in %s" zipname))
+              (error! "No Excel file found in %s" zipname))
 
           _ (log/infof "Reading NPIs from %s" xls-path)
           npis (read-deactive-npis xls-path)
@@ -155,7 +155,7 @@
         _ (log/infof "Dissemination URL is %s" url-zip)
 
         _ (when-not url-zip
-            (raise! "Dissemination URL is missing"))
+            (error! "Dissemination URL is missing"))
 
         ts (util/epoch)
         folder (format "%s-Dissemination" ts)
@@ -168,7 +168,7 @@
     (let [path-csv (util/find-file folder re-dissem-csv)
 
           _ (when-not path-csv
-              (raise! "No CSV Dissemination file found in %s" zipname))
+              (error! "No CSV Dissemination file found in %s" zipname))
 
           path-rel (join-paths folder (-> path-csv io/file file-name))
           table-name (format "temp_%s" ts)
