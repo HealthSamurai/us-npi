@@ -10,6 +10,7 @@
                  [http-kit "2.2.0"]
                  [cheshire "5.6.3"]
                  [org.clojure/tools.logging "0.3.1"]
+                 [ch.qos.logback/logback-classic "1.2.3"]
                  [org.postgresql/postgresql "9.4.1211.jre7"]
                  [dk.ative/docjure "1.12.0"]
                  [hickory "0.7.1"]
