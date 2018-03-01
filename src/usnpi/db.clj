@@ -13,8 +13,11 @@
   *db* {:dbtype "postgresql"
         :connection-uri (or (env/env :database-url) db-url)})
 
-(defn to-sql [sqlmap]
+(defn to-sql
+  [sqlmap]
   (sql/format sqlmap))
+
+;; Here and below: partial won't work here.
 
 (defn query [& args]
   (apply jdbc/query *db* args))
@@ -40,12 +43,16 @@
 (defn execute! [& args]
   (apply jdbc/execute! *db* args))
 
-(defmacro with-tx [& body]
+(defmacro with-tx
+  "Runs a series of queries into transaction."
+  [& body]
   `(jdbc/with-db-transaction [tx# *db*]
      (binding [*db* tx#]
        ~@body)))
 
-(defmacro with-tx-test [& body]
+(defmacro with-tx-test
+  "The same as `with-tx` but rolls back the transaction after all."
+  [& body]
   `(with-trx
      (jdbc/db-set-rollback-only! *db*)
      ~@body))
