@@ -1,4 +1,7 @@
-export PGUSER=postgres 
-export PGPORT=5678
 export PGHOST=locahost
+export PGPORT=5678
+export PGDATABASE=usnpi
+export PGUSER=postgres
 export PGPASSWORD=verysecret
+export FHIRTERM_BASE=/path/to/FHIRTERM_BASE
+export BEAT_TIMEOUT=30
