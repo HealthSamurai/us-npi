@@ -5,23 +5,18 @@
             [environ.core :refer [env]]))
 
 (def ^:private
-  url-template
-  "jdbc:postgresql://%s:%s/%s?stringtype=unspecified&user=%s&password=%s")
-
-(def ^:private
-  url-db
-  (let [args ((juxt :pghost :pgport :pgdatabase :pguser :pgpassword) env)]
-    (apply format url-template args)))
+  default-url
+  "jdbc:postgresql://localhost:5678/usnpi?stringtype=unspecified&user=postgres&password=verysecret")
 
 (def ^:dynamic
   *db* {:dbtype "postgresql"
-        :connection-uri url-db})
+        :connection-uri (or (env :database-url) default-url)})
 
 (defn to-sql
   [sqlmap]
   (sql/format sqlmap))
 
-;; Here and below: partial doesn't work with binding.
+;; Here and below: partial won't work.
 
 (defn query [& args]
   (apply jdbc/query *db* args))

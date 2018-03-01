@@ -27,6 +27,9 @@
 
   :plugins [[migratus-lein "0.5.7"]]
 
+  :migratus {:store :database
+             :db ~(get (System/getenv) "DATABASE_URL")}
+
   :main usnpi.core
 
   :profiles {:uberjar {:aot :all :omit-source true}}
