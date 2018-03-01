@@ -1,3 +1,6 @@
+#
+# for local usage only
+#
 
 uberjar-build:
 	lein uberjar
