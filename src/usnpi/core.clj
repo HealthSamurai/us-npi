@@ -66,5 +66,4 @@
 
 (defn -main [& _]
   #_(sync/init)
-  (println "Start server on 8080")
   (start))

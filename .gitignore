@@ -12,3 +12,4 @@ pom.xml.asc
 build
 npidata
 .DS_Store
+.env

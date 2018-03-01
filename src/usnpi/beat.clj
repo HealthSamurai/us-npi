@@ -6,6 +6,7 @@
   it's resolved and run."
   (:require [usnpi.db :as db]
             [usnpi.util :refer [raise!]]
+            [environ.core :refer [env]]
             [clj-time.core :as t]
             [clojure.tools.logging :as log]))
 
@@ -61,8 +62,8 @@
   state (atom nil))
 
 (def ^{:private true
-       :doc "A number of milliseconds between each beat."}
-  timeout (* 1000 60 30))
+       :doc "A number of seconds between each beat."}
+  timeout (or (:beat-timeout env) (* 60 30)))
 
 (defn- finished?
   "Checks whether a future was finished no matter successful or not."
@@ -74,6 +75,7 @@
   "Starts an endless cycle evaluating tasks in separated futures."
   []
   (while true
+    (log/info "Anoter beat cycle...")
     (try
       (doseq [{:keys [handler] :as task} (read-tasks)]
         (future
@@ -91,7 +93,7 @@
       (catch Throwable e
         (log/error e "Uncaught exception"))
       (finally
-        (Thread/sleep timeout)))))
+        (Thread/sleep (* 1000 timeout))))))
 
 ;;
 ;; public api
