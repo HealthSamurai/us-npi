@@ -2,7 +2,7 @@
   (:require [usnpi.db :as db]
             [usnpi.util :refer [raise!] :as util]
             [usnpi.sync :as sync]
-            [clojure.java.io :as io] ;; todo
+            [clojure.java.io :as io]
             [clojure.tools.logging :as log]
             [clojure.string :as str]
             [dk.ative.docjure.spreadsheet :as xls]
@@ -10,7 +10,8 @@
             [hickory.core :as hickory]
             [hickory.select :as s]))
 
-(def ^:private
+(def ^{:private true
+       :doc "How many DB records to update at once."}
   db-chunk 100)
 
 (def ^:private
@@ -19,7 +20,9 @@
 (def ^:private
   path-dl "NPI_Files.html")
 
-(defn- parse-page [url]
+(defn- parse-page
+  "Returns a parsed tree for a given URL."
+  [^String url]
   (-> url
       client/get
       :body
@@ -27,7 +30,9 @@
       hickory.core/as-hickory))
 
 (defn- link-selector
-  [text]
+  "Returns a selector function that is aimed to a link
+  with an inner text that match a given text."
+  [^String text]
   (s/and
    (s/tag :a)
    (s/find-in-text (re-pattern text))))
@@ -43,17 +48,25 @@
 (defn- full-url [href]
   (str path-base href))
 
-(defn- get-deactive-url [page-tree]
+(defn- get-deactive-url
+  "Finds a URL for the last deactivation file on the download page.
+  May return nil when not found."
+  [page-tree]
   (when-let [node (last (s/select deactive-selector page-tree))]
     (let [href (-> node :attrs :href)]
       (full-url href))))
 
-(defn- get-dissem-url [page-tree]
+(defn- get-dissem-url
+  "Finds a URL for the last dissemination file on the download page.
+  May return nil when not found."
+  [page-tree]
   (when-let [node (last (s/select dissem-selector page-tree))]
     (let [href (-> node :attrs :href)]
       (full-url href))))
 
-(defn- read-deactive-npis [source]
+(defn- read-deactive-npis
+  "Returns a vector of NPI string IDs for a give Excel file (or a stream)."
+  [source]
   (let [wb (xls/load-workbook source)
         sheet (first (xls/sheet-seq wb))
         cell (xls/select-columns {:A :npi} sheet)
@@ -63,7 +76,9 @@
 (defn- by-chunks [n seq]
   (partition n n [] seq))
 
-(defn- mark-npi-deleted [npis-all]
+(defn- mark-npi-deleted
+  "Marks practitioners as deleted by passed NPIs."
+  [npis-all]
   (db/with-tx
     (doseq [npis (by-chunks db-chunk npis-all)]
       (db/execute!
@@ -81,7 +96,19 @@
 (def ^:private
   re-dissem-csv #"(?i)npidata_pfile.+?\.csv$")
 
-(defn task-deactivate []
+(defn- file-name
+  [^java.io.File file]
+  (.getName file))
+
+(defn- join-paths
+  [path1 path2 & more]
+  (str/join java.io.File/separator
+            (into [path1 path2] more)))
+
+(defn task-deactivate
+  "A regular task that parses the download page, fetches an Excel file
+  and marks the corresponding DB records as deleted."
+  []
   (let [url-page (str path-base path-dl)
 
         _ (log/infof "Parsing %s page..." url-page)
@@ -115,7 +142,10 @@
 
     nil))
 
-(defn task-dissemination []
+(defn task-dissemination
+  "A regular task that parses the download page, fetches a CSV file
+  and inserts/updates the existing practitioners."
+  []
   (let [url-page (str path-base path-dl)
 
         _ (log/infof "Parsing %s page..." url-page)
@@ -140,9 +170,8 @@
           _ (when-not path-csv
               (raise! "No CSV Dissemination file found in %s" zipname))
 
-          path-rel (str folder "/" (-> path-csv java.io.File. .getName))
+          path-rel (join-paths folder (-> path-csv io/file file-name))
           table-name (format "temp_%s" ts)
-
           sql (sync/sql-dissem {:path-csv path-rel
                                 :path-import path-csv
                                 :table-name table-name})
