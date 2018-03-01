@@ -4,15 +4,24 @@
             [clj-time.jdbc]
             [environ.core :refer [env]]))
 
+(def ^:private
+  url-template
+  "jdbc:postgresql://%s:%s/%s?stringtype=unspecified&user=%s&password=%s")
+
+(def ^:private
+  url-db
+  (let [args ((juxt :pghost :pgport :pgdatabase :pguser :pgpassword) env)]
+    (apply format url-template args)))
+
 (def ^:dynamic
   *db* {:dbtype "postgresql"
-        :connection-uri (env :database-url)})
+        :connection-uri url-db})
 
 (defn to-sql
   [sqlmap]
   (sql/format sqlmap))
 
-;; Here and below: partial won't work.
+;; Here and below: partial doesn't work with binding.
 
 (defn query [& args]
   (apply jdbc/query *db* args))
