@@ -5,7 +5,7 @@
   function of zero arguments. E.g: 'my.project/some-function'. Then
   it's resolved and run."
   (:require [usnpi.db :as db]
-            [usnpi.util :refer [raise!]]
+            [usnpi.util :refer [error!]]
             [environ.core :refer [env]]
             [clj-time.core :as t]
             [clojure.tools.logging :as log]))
@@ -13,8 +13,12 @@
 (defn- resolve-func [task]
   (-> task :handler symbol resolve))
 
+(defn- +seconds
+  [time secs]
+  (t/plus time (t/seconds secs)))
+
 (defn- next-time [secs]
-  (t/plus (t/now) (t/seconds secs)))
+  (+seconds (t/now) secs))
 
 (defn- update-task [task fields]
   (db/update! :tasks fields ["id = ?" (:id task)]))
@@ -84,7 +88,7 @@
             (task-running task)
             (if-let [func (resolve-func task)]
               (func)
-              (raise! "Cannot resolve a task: %s" handler))
+              (error! "Cannot resolve a task: %s" handler))
             (log/infof "Task is done: %s" handler)
             (task-success task)
             (catch Throwable e
@@ -99,15 +103,28 @@
 ;; public api
 ;;
 
+(defn task-exists?
+  [handler]
+  (boolean
+   (not-empty
+    (db/find-by-keys :tasks {:handler handler}))))
+
 (defn seed-task
   "Adds a new task into the DB. Handler is a string
   that points to a zero-argument function (e.g. 'namespace/function-name').
-  Interval is a number of seconds stands for how often the task should be run."
-  [handler interval]
-  (db/insert! :tasks {:handler handler
-                      :interval interval
-                      :next_run_at (next-time interval)
-                      :message "Task created."}))
+  Interval is a number of seconds stands for how often the task should be run.
+  Offset is an optional number of seconds to shift the first launch time
+  and thus prevent tasks' simultaneous execution."
+
+  ([handler interval]
+   (seed-task handler interval 0))
+
+  ([handler interval offset]
+   (let [run-at (next-time (+ interval offset))]
+     (db/insert! :tasks {:handler handler
+                         :interval interval
+                         :next_run_at run-at
+                         :message "Task created."}))))
 
 (defn status []
   "Checks whether the beat works or not."
@@ -120,7 +137,7 @@
     (do
       (reset! state (future (beat)))
       (log/info "Beat started."))
-    (raise! "The beat wasn't stopped properly.")))
+    (error! "The beat wasn't stopped properly.")))
 
 (defn stop []
   "Stops the background beat."
@@ -128,4 +145,4 @@
     (do
       (future-cancel @state)
       (log/info "Beat stopped."))
-    (raise! "The beat was not started or is already stopped.")))
+    (error! "The beat was not started or is already stopped.")))
