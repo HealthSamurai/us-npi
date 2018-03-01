@@ -28,27 +28,14 @@
 
    (map (fn [[pr & pth]]
           (str "'" (name pr) ":' || coalesce((resource#>>'{" (str/join "," (mapv (fn [x] (if (keyword? x) (name x) (str x))) pth)) "}'), '')")))
-   (str/join " || ' ' || ")))
+   (str/join " || ' ' || \n")))
 
 (defn debug-expr []
   (db/query [(format "select %s from practitioner limit 10" search-expression)]))
 
-(comment (debug-expr))
-
 (def trgrm_idx
-  (format " CREATE INDEX pract_trgm_idx ON practitioner USING GIST ((%s) gist_trgm_ops);" search-expression))
-
-;; trgrm_idx
-
-(defn migrate []
-  #_(db/execute! "DROP INDEX pract_trgm_idx;")
-  #_(db/execute! trgrm_idx))
-
-(comment
-
-  (migrate)
-
-  )
+  (format "CREATE INDEX IF NOT EXISTS pract_trgm_idx ON practitioner USING GIST ((\n%s\n) gist_trgm_ops);"
+          search-expression))
 
 (def to-resource-expr "(resource || jsonb_build_object('id', id, 'resourceType', 'Practitioner'))")
 
