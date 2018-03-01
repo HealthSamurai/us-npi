@@ -12,6 +12,7 @@
                  [org.clojure/tools.logging "0.3.1"]
                  [ch.qos.logback/logback-classic "1.2.3"]
                  [org.postgresql/postgresql "9.4.1211.jre7"]
+                 [migratus "1.0.6"]
                  [dk.ative/docjure "1.12.0"]
                  [hickory "0.7.1"]
                  [honeysql "0.9.1"]
@@ -23,6 +24,10 @@
                  [clojurewerkz/elastisch "3.0.0-beta2"]
                  [clojure-csv/clojure-csv "2.0.1"]
                  [ring/ring-defaults "0.2.3"]]
+
+  :plugins [[migratus-lein "0.5.7"]]
+
+  :main usnpi.core
 
   :profiles {:uberjar {:aot :all :omit-source true}}
   :uberjar-name "usnpi.jar")
