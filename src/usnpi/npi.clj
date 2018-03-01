@@ -1,20 +1,14 @@
 (ns usnpi.npi
-  (:require [clojure.java.jdbc :as jdbc]
-            [clojure.string :as str]
-            [environ.core :as env]
-            [honeysql.core :as honey]
-            [honeysql.format :as sqlf])
+  (:require [usnpi.db :as db]
+            [clojure.string :as str])
   (:import [java.net URLEncoder]))
 
 (defn url-encode [x] (when x (URLEncoder/encode x)))
 
 (defn sanitize [x] (str/replace x #"[^a-zA-Z0-9]" ""))
 
-(def db {:dbtype "postgresql"
-         :connection-uri (or (env/env :database-url) "jdbc:postgresql://localhost:5678/usnpi?stringtype=unspecified&user=postgres&password=verysecret")})
-
 (def search-expression
-  (->> 
+  (->>
    [[:g :name 0 :given 0]
     [:g :name 0 :given 1]
     [:m :name 0 :middle 0]
@@ -37,7 +31,7 @@
    (str/join " || ' ' || ")))
 
 (defn debug-expr []
-  (jdbc/query  db [(format "select %s from practitioner limit 10" search-expression)]))
+  (db/query [(format "select %s from practitioner limit 10" search-expression)]))
 
 (comment (debug-expr))
 
@@ -47,8 +41,8 @@
 ;; trgrm_idx
 
 (defn migrate []
-  #_(jdbc/execute! db "DROP INDEX pract_trgm_idx;")
-  #_(jdbc/execute! db trgrm_idx))
+  #_(db/execute! "DROP INDEX pract_trgm_idx;")
+  #_(db/execute! trgrm_idx))
 
 (comment
 
@@ -63,7 +57,7 @@
 
 (defn get-practitioner [{{npi :npi} :route-params :as req}]
   (println "get pracititioner:" npi)
-  (if-let [pr (time (:resource (first (jdbc/query db [practitioner-by-id-sql npi]))))]
+  (if-let [pr (time (:resource (first (db/query [practitioner-by-id-sql npi]))))]
     {:status 200 :body pr}
     {:status 404 :body (str "Practitioner with id = " npi " not found")}))
 
@@ -85,7 +79,7 @@ from (select %s as resource from practitioner where %s limit %s) x"
 (defn get-pracitioners [{params :params :as req}]
   (let [q (get-practitioners-query params)
         _ (println q)
-        prs (time (jdbc/query db [q]))]
+        prs (time (db/query [q]))]
     {:status 200
      :body (:bundle (first prs))}))
 
@@ -99,7 +93,7 @@ from (select %s as resource from practitioner where %s limit %s) x"
                            (str/join ",")))]
       (println sql)
       {:status 200
-       :body (->> (time (mapv :resource (jdbc/query db sql))))})
+       :body (->> (time (mapv :resource (db/query sql))))})
     {:status 422
      :body {:message "ids parameter requried"}}))
 
@@ -107,21 +101,20 @@ from (select %s as resource from practitioner where %s limit %s) x"
 (comment
 
 
-  
+
 
   (spit "/tmp/test.sql"
         (get-practitioners-query {:name "dave hol" :state "NY"})
         )
-  
+
 
   ()
 
-  (jdbc/execute! db "create extension pg_trgm")
+  (db/execute! "create extension pg_trgm")
 
-  
 
-  (jdbc/execute!
-   db
+
+  (db/execute!
    "
 CREATE UNIQUE INDEX CONCURRENTLY practitioner_idx ON practitioner (id);
 ALTER TABLE practitioner ADD CONSTRAINT practitioner_pkey PRIMARY KEY USING INDEX practitioner_idx;

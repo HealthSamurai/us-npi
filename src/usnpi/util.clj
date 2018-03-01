@@ -8,6 +8,15 @@
             [clojure.string :as str])
   (:import java.util.regex.Matcher))
 
+(defn raise!
+  ([msg]
+   (throw (Exception. msg)))
+  ([tpl & args]
+   (raise! (apply format tpl args))))
+
+(defn epoch []
+  (quot (System/currentTimeMillis) 1000))
+
 (defn to-json [x]
   (json/encode x))
 
@@ -143,14 +152,22 @@
       (str/replace #"\s+" "_")
       (str/replace #"[^a-z0-9_]" "")))
 
-(defn table-def-from-csv [name path & [delim]]
+(defn table-def-from-csv [name path & [{:keys [delim temp?]}]]
   (with-open [in-file (io/reader (from-workdir path))]
     (let [headers (str/split (first (line-seq in-file)) (or delim #","))
           ddl-columns (map (fn [x] (str (normaliza-column-name x) " text")) headers)]
-      (str "CREATE TABLE " name " (\n" (str/join ",\n " ddl-columns) "\n);"))))
+      (str "CREATE " (when temp? " TEMP ") " TABLE " name " (\n" (str/join ",\n " ddl-columns) "\n);"))))
 
 (defn xlsx-to-csv [source dest ]
   (exec! (format "ssconvert %s %s -S" (from-workdir source) (from-workdir dest))))
 
 (defn file-seq* [path]
   (file-seq (io/file (from-workdir path))))
+
+(defn find-file [path re]
+  (some
+   (fn [file]
+     (let [path (.getAbsolutePath file)]
+       (when (re-find re path)
+         path)))
+   (file-seq* path)))
