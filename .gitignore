@@ -11,3 +11,4 @@ pom.xml.asc
 .hg/
 build
 npidata
+.DS_Store
