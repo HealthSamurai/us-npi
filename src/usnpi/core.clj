@@ -3,6 +3,7 @@
   (:require [usnpi.sync :as sync]
             [usnpi.npi :as npi]
             [usnpi.migrate :as migrate]
+            [usnpi.tasks :as tasks]
             [ring.util.codec]
             [ring.util.io]
             [clojure.tools.logging :as log]
@@ -58,12 +59,11 @@
      :body (str "Url " (str/lower-case uri) " not found " (keys routes))}))
 
 (defn start [& [port]]
-  (migrate/migrate)
-
+  (migrate/init)
+  (tasks/init)
   (let [port (or port 8080)]
     (log/infof "Start server on port %s" port)
     (server/run-server (cors-mw #'index) {:port port})))
 
 (defn -main [& _]
-  #_(sync/init)
   (start))
