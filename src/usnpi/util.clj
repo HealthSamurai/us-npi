@@ -138,6 +138,11 @@
   (log/info "unzip" (from-workdir path))
   (sh/sh "unzip" path :dir *wd*))
 
+(defn un7z [path]
+  "Extracts an archive WITHOUT keeping directory structure."
+  (log/info "7z a" (from-workdir path))
+  (sh/sh "7z" "a" path :dir *wd*))
+
 (defn normaliza-column-name [x]
   (-> x
       str/lower-case

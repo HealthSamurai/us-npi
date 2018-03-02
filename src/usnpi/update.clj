@@ -17,10 +17,10 @@
   db-chunk 100)
 
 (def ^:private
-  path-base "http://download.cms.gov/nppes/")
+  url-base "http://download.cms.gov/nppes")
 
 (def ^:private
-  path-dl "NPI_Files.html")
+  url-download (str url-base "/NPI_Files.html"))
 
 (defn- parse-page
   "Returns a parsed tree for a given URL."
@@ -31,43 +31,47 @@
       hickory.core/parse
       hickory.core/as-hickory))
 
-(defn- link-selector
-  "Returns a selector function that is aimed to a link
-  with an inner text that match a given text."
-  [^String text]
-  (s/and
-   (s/tag :a)
-   (s/find-in-text (re-pattern text))))
-
 (def ^:private
-  deactive-selector
-  (link-selector "NPPES Data Dissemination - Monthly Deactivation Update"))
-
-(def ^:private
-  dissem-selector
-  (link-selector "NPPES Data Dissemination - Weekly Update"))
+  parse-dl-page
+  (partial parse-page url-download))
 
 (defn- full-url [href]
-  (str path-base href))
+  (let [href (if (= (first href) \.)
+               (subs href 1)
+               href)]
+    (str url-base href)))
 
-(defn- get-deactive-url
-  "Finds a URL for the last deactivation file on the download page.
-  May return nil when not found."
-  [page-tree]
-  (when-let [node (last (s/select deactive-selector page-tree))]
-    (let [href (-> node :attrs :href)]
-      (full-url href))))
+(defn- url->name [url]
+  (last (str/split url #"/")))
 
-(defn- get-dissem-url
-  "Finds a URL for the last dissemination file on the download page.
-  May return nil when not found."
-  [page-tree]
-  (when-let [node (last (s/select dissem-selector page-tree))]
-    (let [href (-> node :attrs :href)]
-      (full-url href))))
+(defn- parse-download-url
+  "For a given regex and a parsed page, tries to find the latest
+  <a> node which inner text matches the regex. Than takes its href value
+  and composes the full URL to download a file.
+  Returns nil when no nodes were found."
+  [regex page-tree]
+  (let [selector (s/and (s/tag :a) (s/find-in-text regex))]
+    (when-let [node (last (s/select selector page-tree))]
+      (let [href (-> node :attrs :href)]
+        (full-url href)))))
+
+(def ^:private
+  parse-deact-url
+  (partial parse-download-url
+           #"NPPES Data Dissemination - Monthly Deactivation Update"))
+
+(def ^:private
+  parse-dissem-url
+  (partial parse-download-url
+           #"NPPES Data Dissemination - Weekly Update"))
+
+(def ^:private
+  parse-dissem-full-url
+  (partial parse-download-url
+           #"NPPES Data Dissemination \("))
 
 (defn- read-deactive-npis
-  "Returns a vector of NPI string IDs for a give Excel file (or a stream)."
+  "Returns a vector of NPI string IDs for a given Excel file (or a stream)."
   [source]
   (let [wb (xls/load-workbook source)
         sheet (first (xls/sheet-seq wb))
@@ -89,14 +93,14 @@
          :set {:deleted true}
          :where [:in :id npis]})))))
 
-(defn- url->name [url]
-  (last (str/split url #"/")))
-
 (def ^:private
   re-any-xlsx #"(?i)\.xlsx$")
 
 (def ^:private
   re-dissem-csv #"(?i)npidata_pfile.+?\.csv$")
+
+(def ^:private
+  re-dissem-full-csv #"(?i)npidata_\d+?-\d+?\.csv$")
 
 (defn- file-name
   [^java.io.File file]
@@ -111,28 +115,29 @@
   "A regular task that parses the download page, fetches an Excel file
   and marks the corresponding DB records as deleted."
   []
-  (let [url-page (str path-base path-dl)
+  (let [_ (log/info "Parsing download page...")
+        page-tree (parse-dl-page)
 
-        _ (log/infof "Parsing %s page..." url-page)
-        page-tree (parse-page url-page)
-
-        url-zip (get-deactive-url page-tree)
+        url-zip (parse-deact-url page-tree)
         _ (log/infof "Deactivation URL is %s" url-zip)
 
         _ (when-not url-zip
             (error! "Deactivation URL is missing"))
 
-        folder (format "%s-Deactivation" (time/epoch))
+        ts (time/epoch)
+        folder (format "%s-Deactivation" ts)
         zipname (url->name url-zip)]
 
     (util/in-dir folder
+      (log/infof "Downloading file %s" url-zip)
       (util/curl url-zip zipname)
+      (log/infof "Unzipping file %s" zipname)
       (util/unzip zipname))
 
     (let [xls-path (util/find-file folder re-any-xlsx)
 
           _ (when-not xls-path
-              (error! "No Excel file found in %s" zipname))
+              (error! "No Excel file found in %s" folder))
 
           _ (log/infof "Reading NPIs from %s" xls-path)
           npis (read-deactive-npis xls-path)
@@ -148,12 +153,10 @@
   "A regular task that parses the download page, fetches a CSV file
   and inserts/updates the existing practitioners."
   []
-  (let [url-page (str path-base path-dl)
+  (let [_ (log/info "Parsing download page...")
+        page-tree (parse-dl-page)
 
-        _ (log/infof "Parsing %s page..." url-page)
-        page-tree (parse-page url-page)
-
-        url-zip (get-dissem-url page-tree)
+        url-zip (parse-dissem-url page-tree)
         _ (log/infof "Dissemination URL is %s" url-zip)
 
         _ (when-not url-zip
@@ -164,13 +167,15 @@
         zipname (url->name url-zip)]
 
     (util/in-dir folder
+      (log/infof "Downloading file %s" url-zip)
       (util/curl url-zip zipname)
+      (log/infof "Unzipping file %s" zipname)
       (util/unzip zipname))
 
     (let [path-csv (util/find-file folder re-dissem-csv)
 
           _ (when-not path-csv
-              (error! "No CSV Dissemination file found in %s" zipname))
+              (error! "No CSV Dissemination file found in %s" folder))
 
           path-rel (join-paths folder (-> path-csv io/file file-name))
           table-name (format "temp_%s" ts)
@@ -178,14 +183,58 @@
                                 :path-import path-csv
                                 :table-name table-name})
 
-          sql-name "dissemination.sql"
-          sql-path (join-paths folder sql-name)]
+          sql-path (join-paths folder "dissemination.sql")]
 
-      (util/in-dir folder
-        (util/spit* sql-name sql))
+      (util/spit* sql-path sql)
       (log/infof "Dissemination SQL is %s" sql-path)
 
-      (log/infof "Running dissemination SQL againts the DB")
-      (db/execute! sql)))
+      (log/infof "Running dissemination SQL from %s" sql-path)
+      (db/execute! sql)
+      (log/info "SQL done.")))
 
   nil)
+
+(defn task-full-dissemination
+  "Performs a FULL dissemination data import.
+  Since a data file exceeds 4GB, the process might take quite long."
+  []
+  (let [_ (log/info "Parsing download page...")
+        page-tree (parse-dl-page)
+
+        url-zip (parse-dissem-full-url page-tree)
+        _ (log/infof "FULL dissemination URL is %s" url-zip)
+
+        _ (when-not url-zip
+            (error! "FULL dissemination URL is missing"))
+
+        ts (time/epoch)
+        folder (format "%s-Full-dissemination" ts)
+        zipname (url->name url-zip)]
+
+    (util/in-dir folder
+      (log/infof "Downloading file %s" url-zip)
+      (util/curl url-zip zipname)
+      (log/infof "Unzipping file %s" zipname)
+      (util/un7z zipname)) ;; unzip fails on over-4Gb files
+
+    (let [path-csv (util/find-file folder re-dissem-full-csv)
+
+          _ (when-not path-csv
+              (error! "No FULL CSV Dissemination file found in %s" folder))
+
+          path-rel (join-paths folder (-> path-csv io/file file-name))
+          table-name (format "temp_%s" ts)
+          sql (sync/sql-dissem {:path-csv path-rel
+                                :path-import path-csv
+                                :table-name table-name})
+
+          sql-path (join-paths folder "dissemination-full.sql")]
+
+      (util/spit* sql-path sql)
+      (log/infof "FULL Dissemination SQL is %s" sql-path)
+
+      (log/infof "Running FULL dissemination SQL from %s" sql-path)
+      (db/execute! sql)
+      (log/info "SQL done."))
+
+    nil))

@@ -37,6 +37,9 @@ lein repl
 java -jar ./target/usnpi.jar
 ```
 
+Make sure you've got `sed`, `unzip` and `7z` command line tools installed and
+accessible from your PATH.
+
 ## TODO
 
 * Make it autonomous - i.e. save loaded months; check for updates - download and install udpates
