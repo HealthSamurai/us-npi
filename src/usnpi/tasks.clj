@@ -19,17 +19,18 @@
 (def ^:private
   tasks
 
+  ;; start the full import in five minutes, might take about 1h
   [{:handler (func->str #'update/task-full-dissemination)
     :interval (* hour 6)
     :offset (* minute 5)}
 
    {:handler (func->str #'update/task-deactivation)
     :interval (* hour 6)
-    :offset (* minute 30)}
+    :offset (+ hour (* minute 30))}
 
    {:handler (func->str #'update/task-dissemination)
     :interval (* hour 6)
-    :offset (* minute 45)}])
+    :offset (+ hour (* minute 40))}])
 
 (defn- task-exists?
   [handler]
