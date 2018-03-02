@@ -2,8 +2,7 @@ begin;
 
 create table if not exists practitioner (
     id       text primary key,
-    deleted  boolean not null default false,
-    resource jsonb
+    resource jsonb null
 );
 
 -- copied from usnpi.npi/trgrm_idx
