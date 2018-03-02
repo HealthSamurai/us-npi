@@ -8,15 +8,6 @@
             [clojure.string :as str])
   (:import java.util.regex.Matcher))
 
-(defn error!
-  ([msg]
-   (throw (Exception. msg)))
-  ([tpl & args]
-   (error! (apply format tpl args))))
-
-(defn epoch []
-  (quot (System/currentTimeMillis) 1000))
-
 (defn to-json [x]
   (json/encode x))
 
@@ -25,7 +16,7 @@
 
 (def base-dir
   (or (System/getenv "FHIRTERM_BASE")
-      "/Users/nicola/usnpi/build/"))
+      "/Users/nicola/usnpi/build/")) ;; todo
 
 (def ^:dynamic *wd* base-dir)
 

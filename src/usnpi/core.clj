@@ -4,6 +4,7 @@
             [usnpi.npi :as npi]
             [usnpi.migrate :as migrate]
             [usnpi.tasks :as tasks]
+            [usnpi.beat :as beat]
             [ring.util.codec]
             [ring.util.io]
             [clojure.tools.logging :as log]
@@ -61,6 +62,7 @@
 (defn start [& [port]]
   (migrate/init)
   (tasks/init)
+  (beat/start)
   (let [port (or port 8080)]
     (log/infof "Start server on port %s" port)
     (server/run-server (cors-mw #'index) {:port port})))

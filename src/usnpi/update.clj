@@ -1,6 +1,8 @@
 (ns usnpi.update
   (:require [usnpi.db :as db]
-            [usnpi.util :refer [error!] :as util]
+            [usnpi.time :as time]
+            [usnpi.error :refer [error!]]
+            [usnpi.util :as util]
             [usnpi.sync :as sync]
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]
@@ -120,7 +122,7 @@
         _ (when-not url-zip
             (error! "Deactivation URL is missing"))
 
-        folder (format "%s-Deactivation" (util/epoch))
+        folder (format "%s-Deactivation" (time/epoch))
         zipname (url->name url-zip)]
 
     (util/in-dir folder
@@ -157,7 +159,7 @@
         _ (when-not url-zip
             (error! "Dissemination URL is missing"))
 
-        ts (util/epoch)
+        ts (time/epoch)
         folder (format "%s-Dissemination" ts)
         zipname (url->name url-zip)]
 

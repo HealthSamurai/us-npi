@@ -1,6 +1,6 @@
 (ns usnpi.tasks
   (:require [usnpi.db :as db]
-            [usnpi.beat :as beat]
+            [usnpi.time :as time]
             [usnpi.update :as update]
             [clojure.tools.logging :as log]))
 
@@ -24,17 +24,38 @@
     :interval (* hour 6)
     :offset hour}])
 
+(defn- task-exists?
+  [handler]
+  (boolean
+   (not-empty
+    (db/find-by-keys :tasks {:handler handler}))))
+
+(defn- seed-task
+  "Adds a new task into the DB. Handler is a string
+  that points to a zero-argument function (e.g. 'namespace/function-name').
+  Interval is a number of seconds stands for how often the task should be run.
+  Offset is an optional number of seconds to shift the first launch time
+  and thus prevent tasks' simultaneous execution."
+
+  ([handler interval]
+   (seed-task handler interval 0))
+
+  ([handler interval offset]
+   (let [run-at (time/next-time (+ interval offset))]
+     (db/insert! :tasks {:handler handler
+                         :interval interval
+                         :next_run_at run-at
+                         :message "Task created."}))))
+
 (defn init
   "Scans through the declared tasks and adds those of them
   into the database that are missing. Then stars the beat cycle."
   []
   (log/info "Seeding regular tasks...")
   (doseq [{:keys [handler interval offset]} tasks]
-    (when-not (beat/task-exists? handler)
-      (let [db-task (beat/seed-task handler interval offset)
+    (when-not (task-exists? handler)
+      (let [db-task (seed-task handler interval offset)
             {:keys [id next_run_at]} db-task]
         (log/infof "Task %s with DB ID %s scheduled on %s"
                    handler id next_run_at))))
-  (log/info "Tasks done.")
-  (log/info "Starting beat...")
-  (beat/start))
+  (log/info "Tasks done."))

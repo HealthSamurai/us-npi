@@ -5,20 +5,14 @@
   function of zero arguments. E.g: 'my.project/some-function'. Then
   it's resolved and run."
   (:require [usnpi.db :as db]
-            [usnpi.util :refer [error!]]
+            [usnpi.error :refer [error!]]
+            [usnpi.time :as time]
             [environ.core :refer [env]]
             [clj-time.core :as t]
             [clojure.tools.logging :as log]))
 
 (defn- resolve-func [task]
   (-> task :handler symbol resolve))
-
-(defn- +seconds
-  [time secs]
-  (t/plus time (t/seconds secs)))
-
-(defn- next-time [secs]
-  (+seconds (t/now) secs))
 
 (defn- update-task [task fields]
   (db/update! :tasks fields ["id = ?" (:id task)]))
@@ -31,9 +25,10 @@
 
 (defn- task-success [task]
   "Marks a task as being finished successfully."
-  (update-task task {:success true
-                     :message "Successfully run."
-                     :next_run_at (-> task :interval next-time)}))
+  (let [run-at (-> task :interval time/next-time)]
+    (update-task task {:success true
+                       :message "Successfully run."
+                       :next_run_at run-at})))
 
 (defn- ^String exc-msg
   "Returns a message string for an exception instance."
@@ -45,9 +40,10 @@
 (defn- task-failure
   "Marks a task as being failed because of exception."
   [task e]
-  (update-task task {:success false
-                     :message (exc-msg e)
-                     :next_run_at (-> task :interval next-time)}))
+  (let [run-at (-> task :interval time/next-time)]
+    (update-task task {:success false
+                       :message (exc-msg e)
+                       :next_run_at run-at})))
 
 (defn- read-tasks
   "Returns all the tasks from the database needed to be run."
@@ -102,29 +98,6 @@
 ;;
 ;; public api
 ;;
-
-(defn task-exists?
-  [handler]
-  (boolean
-   (not-empty
-    (db/find-by-keys :tasks {:handler handler}))))
-
-(defn seed-task
-  "Adds a new task into the DB. Handler is a string
-  that points to a zero-argument function (e.g. 'namespace/function-name').
-  Interval is a number of seconds stands for how often the task should be run.
-  Offset is an optional number of seconds to shift the first launch time
-  and thus prevent tasks' simultaneous execution."
-
-  ([handler interval]
-   (seed-task handler interval 0))
-
-  ([handler interval offset]
-   (let [run-at (next-time (+ interval offset))]
-     (db/insert! :tasks {:handler handler
-                         :interval interval
-                         :next_run_at run-at
-                         :message "Task created."}))))
 
 (defn status []
   "Checks whether the beat works or not."
