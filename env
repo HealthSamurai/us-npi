@@ -1,4 +1,4 @@
-export PGUSER=postgres 
+export PGUSER=postgres
 export PGPORT=5678
-export PGHOST=locahost
+export PGHOST=localhost
 export PGPASSWORD=verysecret

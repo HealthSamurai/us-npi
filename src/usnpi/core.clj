@@ -2,7 +2,10 @@
   (:gen-class)
   (:require [usnpi.sync :as sync]
             [usnpi.npi :as npi]
+            [usnpi.util :as util]
             [usnpi.migrate :as migrate]
+            [usnpi.tasks :as tasks]
+            [usnpi.beat :as beat]
             [ring.util.codec]
             [ring.util.io]
             [clojure.tools.logging :as log]
@@ -57,14 +60,17 @@
     {:status 404
      :body (str "Url " (str/lower-case uri) " not found " (keys routes))}))
 
-(defn start [& [port]]
-  (migrate/migrate)
-
+(defn start-server [& [{:keys [port] :as opt}]]
   (let [port (or port 8080)]
-    (log/infof "Start server on port %s" port)
+    (log/infof "Starting server on port %s..." port)
     (server/run-server (cors-mw #'index) {:port port})))
 
+(defn init [& [opt]]
+  (migrate/init)
+  (util/init)
+  (tasks/init)
+  (beat/start)
+  (start-server opt))
+
 (defn -main [& _]
-  #_(sync/init)
-  (println "Start server on 8080")
-  (start))
+  (init))

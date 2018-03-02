@@ -5,15 +5,14 @@
   function of zero arguments. E.g: 'my.project/some-function'. Then
   it's resolved and run."
   (:require [usnpi.db :as db]
-            [usnpi.util :refer [raise!]]
+            [usnpi.error :refer [error!]]
+            [usnpi.time :as time]
+            [environ.core :refer [env]]
             [clj-time.core :as t]
             [clojure.tools.logging :as log]))
 
 (defn- resolve-func [task]
   (-> task :handler symbol resolve))
-
-(defn- next-time [secs]
-  (t/plus (t/now) (t/seconds secs)))
 
 (defn- update-task [task fields]
   (db/update! :tasks fields ["id = ?" (:id task)]))
@@ -26,9 +25,10 @@
 
 (defn- task-success [task]
   "Marks a task as being finished successfully."
-  (update-task task {:success true
-                     :message "Successfully run."
-                     :next_run_at (-> task :interval next-time)}))
+  (let [run-at (-> task :interval time/next-time)]
+    (update-task task {:success true
+                       :message "Successfully run."
+                       :next_run_at run-at})))
 
 (defn- ^String exc-msg
   "Returns a message string for an exception instance."
@@ -40,9 +40,10 @@
 (defn- task-failure
   "Marks a task as being failed because of exception."
   [task e]
-  (update-task task {:success false
-                     :message (exc-msg e)
-                     :next_run_at (-> task :interval next-time)}))
+  (let [run-at (-> task :interval time/next-time)]
+    (update-task task {:success false
+                       :message (exc-msg e)
+                       :next_run_at run-at})))
 
 (defn- read-tasks
   "Returns all the tasks from the database needed to be run."
@@ -61,8 +62,8 @@
   state (atom nil))
 
 (def ^{:private true
-       :doc "A number of milliseconds between each beat."}
-  timeout (* 1000 60 30))
+       :doc "A number of seconds between each beat."}
+  timeout (or (:beat-timeout env) (* 60 30)))
 
 (defn- finished?
   "Checks whether a future was finished no matter successful or not."
@@ -74,6 +75,7 @@
   "Starts an endless cycle evaluating tasks in separated futures."
   []
   (while true
+    (log/info "Anoter beat cycle...")
     (try
       (doseq [{:keys [handler] :as task} (read-tasks)]
         (future
@@ -82,7 +84,7 @@
             (task-running task)
             (if-let [func (resolve-func task)]
               (func)
-              (raise! "Cannot resolve a task: %s" handler))
+              (error! "Cannot resolve a task: %s" handler))
             (log/infof "Task is done: %s" handler)
             (task-success task)
             (catch Throwable e
@@ -91,21 +93,11 @@
       (catch Throwable e
         (log/error e "Uncaught exception"))
       (finally
-        (Thread/sleep timeout)))))
+        (Thread/sleep (* 1000 timeout))))))
 
 ;;
 ;; public api
 ;;
-
-(defn seed-task
-  "Adds a new task into the DB. Handler is a string
-  that points to a zero-argument function (e.g. 'namespace/function-name').
-  Interval is a number of seconds stands for how often the task should be run."
-  [handler interval]
-  (db/insert! :tasks {:handler handler
-                      :interval interval
-                      :next_run_at (next-time interval)
-                      :message "Task created."}))
 
 (defn status []
   "Checks whether the beat works or not."
@@ -118,7 +110,7 @@
     (do
       (reset! state (future (beat)))
       (log/info "Beat started."))
-    (raise! "The beat wasn't stopped properly.")))
+    (error! "The beat wasn't stopped properly.")))
 
 (defn stop []
   "Stops the background beat."
@@ -126,4 +118,4 @@
     (do
       (future-cancel @state)
       (log/info "Beat stopped."))
-    (raise! "The beat was not started or is already stopped.")))
+    (error! "The beat was not started or is already stopped.")))

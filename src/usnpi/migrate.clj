@@ -8,11 +8,7 @@
           :migration-dir "migrations/"
           :db db/*db*})
 
-;;
-;; public
-;;
-
-(defn migrate []
+(defn init []
   (log/info "Running migrations...")
   (migratus/migrate config)
   (log/info "Migrations done."))

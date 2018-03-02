@@ -2,20 +2,12 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]
+            [environ.core :refer [env]]
             [org.httpkit.client :as http]
             [clojure.java.shell :as sh]
             [cheshire.core :as json]
             [clojure.string :as str])
   (:import java.util.regex.Matcher))
-
-(defn raise!
-  ([msg]
-   (throw (Exception. msg)))
-  ([tpl & args]
-   (raise! (apply format tpl args))))
-
-(defn epoch []
-  (quot (System/currentTimeMillis) 1000))
 
 (defn to-json [x]
   (json/encode x))
@@ -24,8 +16,8 @@
   (json/decode x keyword))
 
 (def base-dir
-  (or (System/getenv "FHIRTERM_BASE")
-      "/Users/nicola/usnpi/build/"))
+  (or (-> env :fhirterm-base not-empty)
+      "FHIRTERM_BASE"))
 
 (def ^:dynamic *wd* base-dir)
 
@@ -44,6 +36,9 @@
 
 (defn mk-dir [path]
   (sh/sh "mkdir" "-p" (from-workdir path)))
+
+(defn rm-rf [path]
+  (sh/sh "rm" "-rf" (from-workdir path)))
 
 (defn spit* [path content]
   (spit (from-workdir path) content))
@@ -146,6 +141,11 @@
   (log/info "unzip" (from-workdir path))
   (sh/sh "unzip" path :dir *wd*))
 
+(defn un7z [path]
+  "Extracts an archive WITHOUT keeping directory structure."
+  (log/info "7z e" (from-workdir path))
+  (sh/sh "7z" "e" path :dir *wd*))
+
 (defn normaliza-column-name [x]
   (-> x
       str/lower-case
@@ -171,3 +171,12 @@
        (when (re-find re path)
          path)))
    (file-seq* path)))
+
+(defn init
+  "Creates the base dir if it does not exist."
+  []
+  (if (-> base-dir io/file .exists)
+    (log/infof "Your base dir is %s" base-dir)
+    (do
+      (log/infof "Dir %s doesn't exist, creating it" base-dir)
+      (sh/sh "mkdir" "-p" base-dir))))

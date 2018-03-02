@@ -2,22 +2,21 @@
   (:require [clojure.java.jdbc :as jdbc]
             [honeysql.core :as sql]
             [clj-time.jdbc]
-            [environ.core :as env]))
+            [environ.core :refer [env]]))
 
 (def ^:private
-  ;; db-url "jdbc:postgresql://localhost:5678/usnpi?stringtype=unspecified&user=postgres&password=verysecret"
-  db-url "jdbc:postgresql://localhost:5432/usnpi?stringtype=unspecified&user=usnpi&password=usnpi"
-  )
+  default-url
+  "jdbc:postgresql://localhost:5678/usnpi?stringtype=unspecified&user=postgres&password=verysecret")
 
 (def ^:dynamic
   *db* {:dbtype "postgresql"
-        :connection-uri (or (env/env :database-url) db-url)})
+        :connection-uri (or (env :database-url) default-url)})
 
 (defn to-sql
   [sqlmap]
   (sql/format sqlmap))
 
-;; Here and below: partial won't work here.
+;; Here and below: partial won't work.
 
 (defn query [& args]
   (apply jdbc/query *db* args))
