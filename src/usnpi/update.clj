@@ -103,13 +103,24 @@
   re-dissem-full-csv #"(?i)npidata_\d+?-\d+?\.csv$")
 
 (defn- file-name
-  [^java.io.File file]
-  (.getName file))
+  [filepath]
+  (-> filepath io/file .getName))
+
+(defn- dir-name
+  [filepath]
+  (-> filepath io/file .getParent))
 
 (defn- join-paths
   [path1 path2 & more]
   (str/join java.io.File/separator
             (into [path1 path2] more)))
+
+(defn- heal-csv
+  "Cuts down empty pairs of double quotes and dummy statements from a CSV file."
+  [scv-input csv-output]
+  (util/exec-in-current-dir!
+   (format "cat %s | sed  -e 's/,\"\"/,/g ; s/\"<UNAVAIL>\"//g' > %s"
+           scv-input csv-output)))
 
 (defn task-deactivation
   "A regular task that parses the download page, fetches an Excel file
@@ -175,15 +186,22 @@
       (log/infof "Unzipping file %s" zipname)
       (util/unzip zipname))
 
-    (let [path-csv (util/find-file folder re-dissem-csv)
+    (let [csv-full-path (util/find-file folder re-dissem-csv)
 
-          _ (when-not path-csv
+          _ (when-not csv-full-path
               (error! "No CSV Dissemination file found in %s" folder))
 
-          path-rel (join-paths folder (-> path-csv io/file file-name))
+          fix-name "data.csv"
+          csv-full-dir (dir-name csv-full-path)
+          csv-fix-name (join-paths csv-full-dir fix-name)
+          csv-rel-name (join-paths folder fix-name)
+
+          _ (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
+          _ (heal-csv csv-full-path csv-fix-name)
+
           table-name (format "temp_%s" ts)
-          sql (sync/sql-dissem {:path-csv path-rel
-                                :path-import path-csv
+          sql (sync/sql-dissem {:path-csv csv-rel-name
+                                :path-import csv-fix-name
                                 :table-name table-name})
 
           sql-path (join-paths folder "dissemination.sql")]
@@ -228,15 +246,22 @@
       (log/infof "Unzipping file %s" zipname)
       (util/un7z zipname)) ;; unzip fails on over-4Gb files
 
-    (let [path-csv (util/find-file folder re-dissem-full-csv)
+    (let [csv-full-path (util/find-file folder re-dissem-full-csv)
 
-          _ (when-not path-csv
+          _ (when-not csv-full-path
               (error! "No FULL CSV Dissemination file found in %s" folder))
 
-          path-rel (join-paths folder (-> path-csv io/file file-name))
+          fix-name "data.csv"
+          csv-full-dir (dir-name csv-full-path)
+          csv-fix-name (join-paths csv-full-dir fix-name)
+          csv-rel-name (join-paths folder fix-name)
+
+          _ (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
+          _ (heal-csv csv-full-path csv-fix-name)
+
           table-name (format "temp_%s" ts)
-          sql (sync/sql-dissem {:path-csv path-rel
-                                :path-import path-csv
+          sql (sync/sql-dissem {:path-csv csv-rel-name
+                                :path-import csv-fix-name
                                 :table-name table-name})
 
           sql-path (join-paths folder "dissemination-full.sql")]
