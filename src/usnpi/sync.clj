@@ -173,10 +173,11 @@ FROM ~(table-name)
 WHERE entity_type_code = '1';
 
 -- merge practitioners with new json nodes
-INSERT INTO practitioner (id, resource)
-SELECT id, resource
+INSERT INTO practitioner (id, deleted, resource)
+SELECT id, false, resource
 FROM ~(table-name)_json
-ON CONFLICT (id) DO UPDATE SET resource = EXCLUDED.resource;
+ON CONFLICT (id) DO UPDATE
+SET deleted = EXCLUDED.deleted, resource = EXCLUDED.resource;
 
 -- drop everything
 DROP TABLE ~(table-name);
