@@ -244,7 +244,7 @@
 
     nil))
 
-(defn task-full-disseminationt
+(defn task-full-dissemination
   "Performs a FULL dissemination data import.
   Since a data file exceeds 4GB, the process might take quite long.
   Checks whether there are any practitioner records in the DB.

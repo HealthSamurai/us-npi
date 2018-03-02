@@ -21,7 +21,7 @@
 
   [{:handler (func->str #'update/task-full-dissemination)
     :interval (* hour 6)
-    :offset 0}
+    :offset (* minute 5)}
 
    {:handler (func->str #'update/task-deactivation)
     :interval (* hour 6)
@@ -42,15 +42,15 @@
   that points to a zero-argument function (e.g. 'namespace/function-name').
   Interval is a number of seconds stands for how often the task should be run.
   Offset is an optional number of seconds to shift the first launch time
-  and thus prevent tasks' simultaneous execution."
+  and thus prevent tasks from being executed simultaneously."
 
   ([handler interval]
    (seed-task handler interval 0))
 
   ([handler interval offset]
-   (let [run-at (time/next-time (+ interval offset))]
+   (let [run-at (time/next-time offset)]
      (db/insert! :tasks {:handler handler
-                         :interval interval ;; todo
+                         :interval interval
                          :next_run_at run-at
                          :message "Task created."}))))
 
