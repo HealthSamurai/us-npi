@@ -119,9 +119,9 @@
         page-tree (parse-dl-page)
 
         url-zip (parse-deact-url page-tree)
-        _ (log/infof "Deactivation URL is %s" url-zip)
 
-        _ (when-not url-zip
+        _ (if url-zip
+            (log/infof "Deactivation URL is %s" url-zip)
             (error! "Deactivation URL is missing"))
 
         ts (time/epoch)
@@ -160,9 +160,9 @@
         page-tree (parse-dl-page)
 
         url-zip (parse-dissem-url page-tree)
-        _ (log/infof "Dissemination URL is %s" url-zip)
 
-        _ (when-not url-zip
+        _ (if url-zip
+            (log/infof "Dissemination URL is %s" url-zip)
             (error! "Dissemination URL is missing"))
 
         ts (time/epoch)
@@ -213,9 +213,9 @@
         page-tree (parse-dl-page)
 
         url-zip (parse-dissem-full-url page-tree)
-        _ (log/infof "FULL dissemination URL is %s" url-zip)
 
-        _ (when-not url-zip
+        _ (if url-zip
+            (log/infof "FULL dissemination URL is %s" url-zip)
             (error! "FULL dissemination URL is missing"))
 
         ts (time/epoch)
