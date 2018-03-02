@@ -13,3 +13,4 @@ build
 npidata
 .DS_Store
 env_local
+FHIRTERM_BASE

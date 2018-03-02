@@ -2,6 +2,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]
+            [environ.core :refer [env]]
             [org.httpkit.client :as http]
             [clojure.java.shell :as sh]
             [cheshire.core :as json]
@@ -15,8 +16,8 @@
   (json/decode x keyword))
 
 (def base-dir
-  (or (System/getenv "FHIRTERM_BASE")
-      "/Users/nicola/usnpi/build/")) ;; todo
+  (or (-> env :fhirterm-base not-empty)
+      "FHIRTERM_BASE"))
 
 (def ^:dynamic *wd* base-dir)
 
@@ -162,3 +163,12 @@
        (when (re-find re path)
          path)))
    (file-seq* path)))
+
+(defn init
+  "Creates the base dir if it does not exist."
+  []
+  (if (-> base-dir io/file .exists)
+    (log/infof "Your base dir is %s" base-dir)
+    (do
+      (log/infof "Dir %s doesn't exist, creating it" base-dir)
+      (sh/sh "mkdir" "-p" base-dir))))
