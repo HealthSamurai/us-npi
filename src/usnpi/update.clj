@@ -147,7 +147,10 @@
       (mark-npi-deleted npis)
       (log/infof "Done."))
 
-    nil))
+    (log/infof "Deleting dir %s" folder)
+    (util/rm-rf folder))
+
+  nil)
 
 (defn task-dissemination
   "A regular task that parses the download page, fetches a CSV file
@@ -190,7 +193,10 @@
 
       (log/infof "Running dissemination SQL from %s" sql-path)
       (db/execute! sql)
-      (log/info "SQL done.")))
+      (log/info "SQL done."))
+
+    (log/infof "Deleting dir %s" folder)
+    (util/rm-rf folder))
 
   nil)
 
@@ -242,7 +248,10 @@
       (db/execute! sql)
       (log/info "SQL done."))
 
-    nil))
+    (log/infof "Deleting dir %s" folder)
+    (util/rm-rf folder))
+
+  nil)
 
 (defn task-full-dissemination
   "Performs a FULL dissemination data import.

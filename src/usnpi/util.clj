@@ -37,6 +37,9 @@
 (defn mk-dir [path]
   (sh/sh "mkdir" "-p" (from-workdir path)))
 
+(defn rm-rf [path]
+  (sh/sh "rm" "-rf" (from-workdir path)))
+
 (defn spit* [path content]
   (spit (from-workdir path) content))
 
