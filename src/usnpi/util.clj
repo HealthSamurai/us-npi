@@ -140,8 +140,8 @@
 
 (defn un7z [path]
   "Extracts an archive WITHOUT keeping directory structure."
-  (log/info "7z a" (from-workdir path))
-  (sh/sh "7z" "a" path :dir *wd*))
+  (log/info "7z e" (from-workdir path))
+  (sh/sh "7z" "e" path :dir *wd*))
 
 (defn normaliza-column-name [x]
   (-> x

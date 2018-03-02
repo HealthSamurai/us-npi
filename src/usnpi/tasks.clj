@@ -11,18 +11,25 @@
     (format "%s/%s" (ns-name (:ns m)) (:name m))))
 
 (def ^:private
+  minute 60)
+
+(def ^:private
   hour (* 60 60))
 
 (def ^:private
   tasks
 
-  [{:handler (func->str #'update/task-deactivation)
+  [{:handler (func->str #'update/task-full-dissemination)
     :interval (* hour 6)
     :offset 0}
 
+   {:handler (func->str #'update/task-deactivation)
+    :interval (* hour 6)
+    :offset (* minute 30)}
+
    {:handler (func->str #'update/task-dissemination)
     :interval (* hour 6)
-    :offset hour}])
+    :offset (* minute 45)}])
 
 (defn- task-exists?
   [handler]
@@ -43,7 +50,7 @@
   ([handler interval offset]
    (let [run-at (time/next-time (+ interval offset))]
      (db/insert! :tasks {:handler handler
-                         :interval interval
+                         :interval interval ;; todo
                          :next_run_at run-at
                          :message "Task created."}))))
 

@@ -194,9 +194,14 @@
 
   nil)
 
-(defn task-full-dissemination
-  "Performs a FULL dissemination data import.
-  Since a data file exceeds 4GB, the process might take quite long."
+(defn- practitioner-exists?
+  []
+  (boolean
+   (not-empty
+    (db/query "select id from practitioner limit 1"))))
+
+(defn- task-full-dissemination-inner
+  "See task-full-dissemination docstring."
   []
   (let [_ (log/info "Parsing download page...")
         page-tree (parse-dl-page)
@@ -238,3 +243,15 @@
       (log/info "SQL done."))
 
     nil))
+
+(defn task-full-disseminationt
+  "Performs a FULL dissemination data import.
+  Since a data file exceeds 4GB, the process might take quite long.
+  Checks whether there are any practitioner records in the DB.
+  Does nothing when there are."
+  []
+  (if (practitioner-exists?)
+    (log/info "Practitioner records were found. Skipping FULL import.")
+    (do
+      (log/info "No practitioner records were found. Start FULL import.")
+      (task-full-dissemination-inner))))
