@@ -40,7 +40,7 @@
 (def to-resource-expr "(resource || jsonb_build_object('id', id, 'resourceType', 'Practitioner'))")
 
 (def practitioner-by-id-sql
-  (format " select %s::text as resource from practitioner where id = ? " to-resource-expr))
+  (format " select %s::text as resource from practitioner where not deleted and id = ? " to-resource-expr))
 
 (defn get-practitioner [{{npi :npi} :route-params :as req}]
   (println "get pracititioner:" npi)
@@ -56,11 +56,11 @@
                st (conj (format "%s ilike '%%s:%s %%'" search-expression st)))]
     (format "
 select jsonb_build_object('entry', jsonb_agg(row_to_json(x.*)))::text as bundle
-from (select %s as resource from practitioner where %s limit %s) x"
+from (select %s as resource from practitioner where not deleted %s limit %s) x"
             to-resource-expr
             (if (not (empty? cond))
-              (str/join " AND " cond)
-              " true = true ")
+              (str " AND "(str/join " AND " cond))
+              "")
             (or cnt "100"))))
 
 (defn get-pracitioners [{params :params :as req}]
@@ -73,7 +73,7 @@ from (select %s as resource from practitioner where %s limit %s) x"
 
 (defn get-practitioners-by-ids [{params :params :as req}]
   (if-let [ids  (:ids params)]
-    (let [sql (format "select %s as resource from practitioner where id in (%s)"
+    (let [sql (format "select %s as resource from practitioner where not deleted and id in (%s)"
                       to-resource-expr
                       (->> (str/split ids #"\s*,\s*")
                            (mapv (fn [id] (str "'" (sanitize id) "'")))
