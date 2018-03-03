@@ -8,16 +8,16 @@ See deploy folder and ci3.yaml
 
 ## Local development
 
-Crate a new Git-ignored `env_local` file:
+Crate a new Git-ignored `env_dev` file:
 
 ```bash
-touch env_local
+touch env_dev
 ```
 
 Provide your own Postgres credentials, paths, etc:
 
 ```bash
-$ cat env_local
+$ cat env_dev
 export DATABASE_URL="jdbc:postgresql://localhost:5432/usnpi?stringtype=unspecified&user=<user>&password=<password>"
 export FHIRTERM_BASE=/path/to/FHIRTERM_BASE
 export BEAT_TIMEOUT=30
@@ -26,7 +26,7 @@ export BEAT_TIMEOUT=30
 Load the config:
 
 ```bash
-source env_local
+source env_dev
 ```
 
 Then run either REPL or the compiled uberjar:
