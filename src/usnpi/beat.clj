@@ -5,7 +5,7 @@
   function of zero arguments. E.g: 'my.project/some-function'. Then
   it's resolved and run."
   (:require [usnpi.db :as db]
-            [usnpi.error :refer [error!]]
+            [usnpi.error :refer [error!] :as err]
             [usnpi.time :as time]
             [environ.core :refer [env]]
             [clj-time.core :as t]
@@ -30,19 +30,12 @@
                        :message "Successfully run."
                        :next_run_at run-at})))
 
-(defn- ^String exc-msg
-  "Returns a message string for an exception instance."
-  [^Exception e]
-  (let [class (-> e .getClass .getCanonicalName)
-        message (-> e .getMessage (or "<no message>"))]
-    (format "Exception: %s %s" class message)))
-
 (defn- task-failure
   "Marks a task as being failed because of exception."
   [task e]
   (let [run-at (-> task :interval time/next-time)]
     (update-task task {:success false
-                       :message (exc-msg e)
+                       :message (err/exc-msg e)
                        :next_run_at run-at})))
 
 (defn- read-tasks
