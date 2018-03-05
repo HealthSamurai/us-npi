@@ -38,7 +38,8 @@ java -jar ./target/usnpi.jar
 ```
 
 Make sure you've got `sed`, `unzip` and `7z` command line tools installed and
-accessible from your PATH.
+accessible from your PATH. You'll also need `psql` tool installed which is a
+part of `postgresql-client` package.
 
 ## TODO
 

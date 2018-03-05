@@ -1,7 +1,7 @@
 FROM java:8
 EXPOSE 8080
 
-CMD apt-get install unzip curl postgresql-client
+CMD apt-get install unzip p7zip curl postgresql-client
 
 ENV DATABASE_URL="ups"
 

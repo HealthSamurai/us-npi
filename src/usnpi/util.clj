@@ -1,5 +1,6 @@
 (ns usnpi.util
-  (:require [cheshire.core :as json]
+  (:require [usnpi.error :refer [error!]]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]
             [environ.core :refer [env]]
@@ -37,8 +38,20 @@
 (defn mk-dir [path]
   (sh/sh "mkdir" "-p" (from-workdir path)))
 
+(defn shell
+  "The same as clojure.java.shell/sh but raises an exception
+  in case of non-zero exit code. Otherwise, returns the output string."
+  [& args]
+  (let [{:keys [exit out err]} (apply sh/sh args)]
+    (if (= exit 0)
+      out
+      (error! "Shell error: code %s, reason: %s" exit err))))
+
 (defn rm-rf [path]
-  (sh/sh "rm" "-rf" (from-workdir path)))
+  (shell "rm" "-rf" (from-workdir path)))
+
+(defn psql [sql-file]
+  (shell "psql" "-f" (from-workdir sql-file)))
 
 (defn spit* [path content]
   (spit (from-workdir path) content))
