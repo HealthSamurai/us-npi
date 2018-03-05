@@ -50,7 +50,10 @@
 (defn rm-rf [path]
   (shell "rm" "-rf" (from-workdir path)))
 
-(defn psql [sql-file]
+(defn psql
+  "Performs a SQL file against the database using psql utility.
+  Credentials should be supplied within ENV variables."
+  [sql-file]
   (shell "psql" "-f" (from-workdir sql-file)))
 
 (defn spit* [path content]
