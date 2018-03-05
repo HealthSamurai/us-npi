@@ -252,12 +252,11 @@
 
             (log/infof "Saving dissemination SQL into %s" sql-path)
             (let [sql (sync/sql-dissem sql-params)]
-              (util/spit* sql-path sql))
+              (util/spit* sql-path sql)
 
-            ;; todo psql
-            ;; (log/infof "Running dissemination SQL from %s" sql-path)
-            ;; (db/execute! sql)
-            ;; (log/info "SQL done.")
+              (log/infof "Running dissemination SQL from %s" sql-path)
+              (db/execute! sql)
+              (log/info "SQL done."))
 
             (log/infof "Saving DB dissemination for the URL %s" url-zip)
             (save-dissemination url-zip)
@@ -316,12 +315,11 @@
 
             (log/infof "Saving FULL Dissemination SQL into %s" sql-path)
             (let [sql (sync/sql-dissem sql-params)]
-              (util/spit* sql-path sql))
+              (util/spit* sql-path sql)
 
-            ;; todo psql
-            ;; (log/infof "Running FULL dissemination SQL from %s" sql-path)
-            ;; (db/execute! sql)
-            ;; (log/info "SQL done.")
+              (log/infof "Running FULL dissemination SQL from %s" sql-path)
+              (db/execute! sql)
+              (log/info "SQL done."))
 
             (log/infof "Saving DB FULL dissemination for the URL %s" url-zip)
             (save-dissemination-full url-zip)
