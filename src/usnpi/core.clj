@@ -6,6 +6,7 @@
             [usnpi.migrate :as migrate]
             [usnpi.tasks :as tasks]
             [usnpi.beat :as beat]
+            [usnpi.env :as env]
             [ring.util.codec]
             [ring.util.io]
             [clojure.tools.logging :as log]
@@ -19,7 +20,8 @@
   {:GET (fn [req] {:status 200 :body (pr-str req)})
    "practitioner" {:GET #'npi/get-pracitioners
                    "$batch" {:GET #'npi/get-practitioners-by-ids}
-                   [:npi] {:GET #'npi/get-practitioner}}})
+                   [:npi] {:GET #'npi/get-practitioner}}
+   "env" {:GET #'env/api-env}})
 
 
 (defn allow [origin resp]
