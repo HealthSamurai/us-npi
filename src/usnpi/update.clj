@@ -96,11 +96,13 @@
 (def ^:private
   re-any-xlsx #"(?i)\.xlsx$")
 
+;; npidata_pfile_20180219-20180225.csv
 (def ^:private
-  re-dissem-csv #"(?i)npidata_pfile.+?\.csv$")
+  re-dissem-csv #"(?i)npidata_pfile_\d{8}-\d{8}\.csv$")
 
+;; npidata_20050523-20180213.csv
 (def ^:private
-  re-dissem-full-csv #"(?i)npidata_\d+?-\d+?\.csv$")
+  re-dissem-full-csv #"(?i)npidata_\d{8}-\d{8}\.csv$")
 
 (defn- file-name
   [filepath]
