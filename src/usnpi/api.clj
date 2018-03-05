@@ -1,7 +1,8 @@
 (ns usnpi.api
   "REST API handlers."
-  (:require [environ.core]
-            [cheshire.core :refer [env]]
+  (:require [usnpi.db :as db]
+            [environ.core :refer [env]]
+            [cheshire.core :as json]
             [clojure.string :as str]))
 
 (def ^:private
