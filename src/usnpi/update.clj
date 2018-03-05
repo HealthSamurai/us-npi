@@ -147,6 +147,10 @@
   (partial find-update type-dissemination))
 
 (def ^:private
+  find-dissemination-full
+  (partial find-update type-dissemination-full))
+
+(def ^:private
   save-deactivation
   (partial save-update type-deactivation))
 
@@ -154,6 +158,9 @@
   save-dissemination
   (partial save-update type-dissemination))
 
+(def ^:private
+  save-dissemination-full
+  (partial save-update type-dissemination-full))
 
 ;;
 ;; tasks
@@ -266,58 +273,61 @@
    (not-empty
     (db/query "select id from practitioner limit 1"))))
 
-#_(defn- task-full-dissemination-inner
+(defn- task-full-dissemination-inner
   "See task-full-dissemination docstring."
   []
-  (let [_ (log/info "Parsing download page...")
-        page-tree (parse-dl-page)
+  (log/info "Parsing download page...")
+  (let [page-tree (parse-dl-page)
+        url-zip (parse-dissem-full-url page-tree)]
 
-        url-zip (parse-dissem-full-url page-tree)
+    (if url-zip
+      (log/infof "FULL dissemination URL is %s" url-zip)
+      (error! "FULL dissemination URL is missing"))
 
-        _ (if url-zip
-            (log/infof "FULL dissemination URL is %s" url-zip)
-            (error! "FULL dissemination URL is missing"))
+    (if-let [upd (find-dissemination-full url-zip)]
+      (log/infof "The FULL dissemination URL %s has already been loaded." url-zip)
 
-        ts (time/epoch)
-        folder (format "%s-Full-dissemination" ts)
-        zipname (url->name url-zip)]
+      (let [ts (time/epoch)
+            folder (format "%s-Full-dissemination" ts)
+            zipname (url->name url-zip)]
 
-    (util/in-dir folder
-      (log/infof "Downloading file %s" url-zip)
-      (util/curl url-zip zipname)
-      (log/infof "Unzipping file %s" zipname)
-      (util/un7z zipname)) ;; unzip fails on over-4Gb files
+        (util/in-dir folder
+          (log/infof "Downloading file %s" url-zip)
+          (util/curl url-zip zipname)
+          (log/infof "Unzipping file %s" zipname)
+          ;; 7z but not unzip since the latest fails on over-4Gb files
+          (util/un7z zipname))
 
-    (let [csv-full-path (util/find-file folder re-dissem-full-csv)
+        (if-let [csv-full-path (util/find-file folder re-dissem-full-csv)]
 
-          _ (when-not csv-full-path
-              (error! "No FULL CSV Dissemination file found in %s" folder))
+          (let [fix-name "data.csv"
+                csv-full-dir (dir-name csv-full-path)
+                csv-fix-name (join-paths csv-full-dir fix-name)
+                csv-rel-name (join-paths folder fix-name)
+                table-name (format "temp_%s" ts)
+                sql-params {:path-csv csv-rel-name
+                            :path-import csv-fix-name
+                            :table-name table-name}
+                sql (sync/sql-dissem sql-params)
+                sql-path (join-paths folder "dissemination-full.sql")]
 
-          fix-name "data.csv"
-          csv-full-dir (dir-name csv-full-path)
-          csv-fix-name (join-paths csv-full-dir fix-name)
-          csv-rel-name (join-paths folder fix-name)
+            (util/spit* sql-path sql)
+            (log/infof "FULL Dissemination SQL is %s" sql-path)
 
-          _ (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
-          _ (heal-csv csv-full-path csv-fix-name)
+            (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
+            (heal-csv csv-full-path csv-fix-name)
 
-          table-name (format "temp_%s" ts)
-          sql (sync/sql-dissem {:path-csv csv-rel-name
-                                :path-import csv-fix-name
-                                :table-name table-name})
+            (log/infof "Running FULL dissemination SQL from %s" sql-path)
+            (db/execute! sql)
+            (log/info "SQL done.")
 
-          sql-path (join-paths folder "dissemination-full.sql")]
+            (log/infof "Saving DB FULL dissemination for the URL %s" url-zip)
+            (save-dissemination-full url-zip)
 
-      (util/spit* sql-path sql)
-      (log/infof "FULL Dissemination SQL is %s" sql-path)
+            (log/infof "Deleting dir %s" folder)
+            (util/rm-rf folder))
 
-      (log/infof "Running FULL dissemination SQL from %s" sql-path)
-      (db/execute! sql)
-      (log/info "SQL done."))
-
-    (log/infof "Deleting dir %s" folder)
-    (util/rm-rf folder))
-
+          (error! "No FULL CSV Dissemination file found in %s" folder)))))
   nil)
 
 (defn task-full-dissemination
