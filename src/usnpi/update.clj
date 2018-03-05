@@ -245,18 +245,19 @@
                 sql-params {:path-csv csv-rel-name
                             :path-import csv-fix-name
                             :table-name table-name}
-                sql (sync/sql-dissem sql-params)
                 sql-path (join-paths folder "dissemination.sql")]
 
             (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
             (heal-csv csv-full-path csv-fix-name)
 
-            (util/spit* sql-path sql)
-            (log/infof "Dissemination SQL is %s" sql-path)
+            (log/infof "Saving dissemination SQL into %s" sql-path)
+            (let [sql (sync/sql-dissem sql-params)]
+              (util/spit* sql-path sql))
 
-            (log/infof "Running dissemination SQL from %s" sql-path)
-            (db/execute! sql)
-            (log/info "SQL done.")
+            ;; todo psql
+            ;; (log/infof "Running dissemination SQL from %s" sql-path)
+            ;; (db/execute! sql)
+            ;; (log/info "SQL done.")
 
             (log/infof "Saving DB dissemination for the URL %s" url-zip)
             (save-dissemination url-zip)
@@ -308,18 +309,19 @@
                 sql-params {:path-csv csv-rel-name
                             :path-import csv-fix-name
                             :table-name table-name}
-                sql (sync/sql-dissem sql-params)
                 sql-path (join-paths folder "dissemination-full.sql")]
-
-            (util/spit* sql-path sql)
-            (log/infof "FULL Dissemination SQL is %s" sql-path)
 
             (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
             (heal-csv csv-full-path csv-fix-name)
 
-            (log/infof "Running FULL dissemination SQL from %s" sql-path)
-            (db/execute! sql)
-            (log/info "SQL done.")
+            (log/infof "Saving FULL Dissemination SQL into %s" sql-path)
+            (let [sql (sync/sql-dissem sql-params)]
+              (util/spit* sql-path sql))
+
+            ;; todo psql
+            ;; (log/infof "Running FULL dissemination SQL from %s" sql-path)
+            ;; (db/execute! sql)
+            ;; (log/info "SQL done.")
 
             (log/infof "Saving DB FULL dissemination for the URL %s" url-zip)
             (save-dissemination-full url-zip)
