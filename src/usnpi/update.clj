@@ -257,7 +257,7 @@
               (util/spit* sql-path sql)
 
               (log/infof "Running dissemination SQL from %s" sql-path)
-              (db/execute! sql)
+              (util/psql sql-path)
               (log/info "SQL done."))
 
             (log/infof "Saving DB dissemination for the URL %s" url-zip)
@@ -320,7 +320,7 @@
               (util/spit* sql-path sql)
 
               (log/infof "Running FULL dissemination SQL from %s" sql-path)
-              (db/execute! sql)
+              (util/psql sql-path)
               (log/info "SQL done."))
 
             (log/infof "Saving DB FULL dissemination for the URL %s" url-zip)

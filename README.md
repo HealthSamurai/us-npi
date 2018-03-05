@@ -1,6 +1,6 @@
 # usnpi
 
-US NPI registy in FHIR
+US NPI registry in FHIR
 
 ## Install
 
@@ -8,41 +8,39 @@ See deploy folder and ci3.yaml
 
 ## Local development
 
-Crate a new Git-ignored `env_dev` file:
+Clone an `env` file to a Git-ignored `env_dev` as follows:
 
 ```bash
-touch env_dev
+cp env env_dev
 ```
 
-Provide your own Postgres credentials, paths, etc:
-
-```bash
-$ cat env_dev
-export DATABASE_URL="jdbc:postgresql://localhost:5432/usnpi?stringtype=unspecified&user=<user>&password=<password>"
-export FHIRTERM_BASE=/path/to/FHIRTERM_BASE
-export BEAT_TIMEOUT=30
-```
-
-Load the config:
+Edit this file and provide your own `PG*` values. Pay attention, the database
+URL is constructed automatically by formatting a template. Load the config:
 
 ```bash
 source env_dev
 ```
 
-Then run either REPL or the compiled uberjar:
+To run REPL:
 
 ```bash
-lein repl
-# or
-java -jar ./target/usnpi.jar
+make repl
+```
+
+To build and run an uberjar:
+
+```
+make
+# or make uberjar-build uberjar-run
 ```
 
 Make sure you've got `sed`, `unzip` and `7z` command line tools installed and
-accessible from your PATH.
+accessible from your PATH. You'll also need `psql` tool installed which is a
+part of `postgresql-client` package.
 
 ## TODO
 
-* Make it autonomous - i.e. save loaded months; check for updates - download and install udpates
+* Make it autonomous - i.e. save loaded months; check for updates - download and install updates
 * Organization search
 * Practitioner search
 * Taxonomy terminology
