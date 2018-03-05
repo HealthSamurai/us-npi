@@ -22,7 +22,8 @@
                    "$batch" {:GET #'npi/get-practitioners-by-ids}
                    [:npi] {:GET #'npi/get-practitioner}}
    "env" {:GET #'api/api-env}
-   "updates" {:GET #'api/api-updates}})
+   "updates" {:GET #'api/api-updates}
+   "tasks" {:GET #'api/api-tasks}})
 
 (defn allow [origin resp]
   (merge-with
