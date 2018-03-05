@@ -201,7 +201,7 @@
             (log/infof "Marking NPIs as deleted with a step of %s" db-chunk)
             (mark-npi-deleted npis)
 
-            (log/infof "Saving update to the DB with URL %" url-zip)
+            (log/infof "Saving update to the DB with URL %s" url-zip)
             (save-deactivation url-zip)
 
             (log/infof "Deleting dir %s" folder)
