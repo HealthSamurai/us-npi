@@ -96,11 +96,13 @@
 (def ^:private
   re-any-xlsx #"(?i)\.xlsx$")
 
+;; npidata_pfile_20180219-20180225.csv
 (def ^:private
-  re-dissem-csv #"(?i)npidata_pfile.+?\.csv$")
+  re-dissem-csv #"(?i)npidata_pfile_\d{8}-\d{8}\.csv$")
 
+;; npidata_20050523-20180213.csv
 (def ^:private
-  re-dissem-full-csv #"(?i)npidata_\d+?-\d+?\.csv$")
+  re-dissem-full-csv #"(?i)npidata_\d{8}-\d{8}\.csv$")
 
 (defn- file-name
   [filepath]
@@ -122,100 +124,149 @@
    (format "cat %s | sed  -e 's/,\"\"/,/g ; s/\"<UNAVAIL>\"//g' > %s"
            scv-input csv-output)))
 
+;;
+;; updates
+;;
+
+(def ^:private type-deactivation "deactivation")
+(def ^:private type-dissemination "dissemination")
+(def ^:private type-dissemination-full "dissemination-full")
+
+(defn- find-update
+  [type url]
+  (first (db/find-by-keys :npi_updates {:url url :type type})))
+
+(defn- save-update
+  [type url]
+  (db/insert! :npi_updates {:url url :type type}))
+
+(def ^:private
+  find-deactivation
+  (partial find-update type-deactivation))
+
+(def ^:private
+  find-dissemination
+  (partial find-update type-dissemination))
+
+(def ^:private
+  find-dissemination-full
+  (partial find-update type-dissemination-full))
+
+(def ^:private
+  save-deactivation
+  (partial save-update type-deactivation))
+
+(def ^:private
+  save-dissemination
+  (partial save-update type-dissemination))
+
+(def ^:private
+  save-dissemination-full
+  (partial save-update type-dissemination-full))
+
+;;
+;; tasks
+;;
+
 (defn task-deactivation
   "A regular task that parses the download page, fetches an Excel file
   and marks the corresponding DB records as deleted."
   []
-  (let [_ (log/info "Parsing download page...")
-        page-tree (parse-dl-page)
+  (log/info "Parsing download page...")
+  (let [page-tree (parse-dl-page)
+        url-zip (parse-deact-url page-tree)]
 
-        url-zip (parse-deact-url page-tree)
+    (if url-zip
+      (log/infof "Deactivation URL is %s" url-zip)
+      (error! "Deactivation URL is missing"))
 
-        _ (if url-zip
-            (log/infof "Deactivation URL is %s" url-zip)
-            (error! "Deactivation URL is missing"))
+    (if-let [upd (find-deactivation url-zip)]
+      (log/infof "The deactivation URL %s has already been loaded." url-zip)
 
-        ts (time/epoch)
-        folder (format "%s-Deactivation" ts)
-        zipname (url->name url-zip)]
+      (let [ts (time/epoch)
+            folder (format "%s-Deactivation" ts)
+            zipname (url->name url-zip)]
 
-    (util/in-dir folder
-      (log/infof "Downloading file %s" url-zip)
-      (util/curl url-zip zipname)
-      (log/infof "Unzipping file %s" zipname)
-      (util/unzip zipname))
+        (util/in-dir folder
+          (log/infof "Downloading file %s" url-zip)
+          (util/curl url-zip zipname)
+          (log/infof "Unzipping file %s" zipname)
+          (util/unzip zipname))
 
-    (let [xls-path (util/find-file folder re-any-xlsx)
+        (if-let [xls-path (util/find-file folder re-any-xlsx)]
 
-          _ (when-not xls-path
-              (error! "No Excel file found in %s" folder))
+          (let [_ (log/infof "Reading NPIs from %s" xls-path)
+                npis (read-deactive-npis xls-path)]
 
-          _ (log/infof "Reading NPIs from %s" xls-path)
-          npis (read-deactive-npis xls-path)
-          _ (log/infof "Found %s NPIs to deactive" (count npis))]
+            (log/infof "Found %s NPIs to deactive" (count npis))
 
-      (log/infof "Marking NPIs as deleted with a step of %s" db-chunk)
-      (mark-npi-deleted npis)
-      (log/infof "Done."))
+            (log/infof "Marking NPIs as deleted with a step of %s" db-chunk)
+            (mark-npi-deleted npis)
 
-    (log/infof "Deleting dir %s" folder)
-    (util/rm-rf folder))
+            (log/infof "Saving update to the DB with URL %s" url-zip)
+            (save-deactivation url-zip)
 
+            (log/infof "Deleting dir %s" folder)
+            (util/rm-rf folder))
+
+          (error! "No Excel file found in %s" folder)))))
   nil)
 
 (defn task-dissemination
   "A regular task that parses the download page, fetches a CSV file
   and inserts/updates the existing practitioners."
   []
-  (let [_ (log/info "Parsing download page...")
-        page-tree (parse-dl-page)
+  (log/info "Parsing download page...")
+  (let [page-tree (parse-dl-page)
+        url-zip (parse-dissem-url page-tree)]
 
-        url-zip (parse-dissem-url page-tree)
+    (if url-zip
+      (log/infof "Dissemination URL is %s" url-zip)
+      (error! "Dissemination URL is missing"))
 
-        _ (if url-zip
-            (log/infof "Dissemination URL is %s" url-zip)
-            (error! "Dissemination URL is missing"))
+    (if-let [upd (find-dissemination url-zip)]
+      (log/infof "The dissemination URL %s has already been loaded." url-zip)
 
-        ts (time/epoch)
-        folder (format "%s-Dissemination" ts)
-        zipname (url->name url-zip)]
+      (let [ts (time/epoch)
+            folder (format "%s-Dissemination" ts)
+            zipname (url->name url-zip)]
 
-    (util/in-dir folder
-      (log/infof "Downloading file %s" url-zip)
-      (util/curl url-zip zipname)
-      (log/infof "Unzipping file %s" zipname)
-      (util/unzip zipname))
+        (util/in-dir folder
+          (log/infof "Downloading file %s" url-zip)
+          (util/curl url-zip zipname)
+          (log/infof "Unzipping file %s" zipname)
+          (util/unzip zipname))
 
-    (let [csv-full-path (util/find-file folder re-dissem-csv)
+        (if-let [csv-full-path (util/find-file folder re-dissem-csv)]
 
-          _ (when-not csv-full-path
-              (error! "No CSV Dissemination file found in %s" folder))
+          (let [fix-name "data.csv"
+                csv-full-dir (dir-name csv-full-path)
+                csv-fix-name (join-paths csv-full-dir fix-name)
+                csv-rel-name (join-paths folder fix-name)
+                table-name (format "temp_%s" ts)
+                sql-params {:path-csv csv-rel-name
+                            :path-import csv-fix-name
+                            :table-name table-name}
+                sql-path (join-paths folder "dissemination.sql")]
 
-          fix-name "data.csv"
-          csv-full-dir (dir-name csv-full-path)
-          csv-fix-name (join-paths csv-full-dir fix-name)
-          csv-rel-name (join-paths folder fix-name)
+            (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
+            (heal-csv csv-full-path csv-fix-name)
 
-          _ (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
-          _ (heal-csv csv-full-path csv-fix-name)
+            (log/infof "Saving dissemination SQL into %s" sql-path)
+            (let [sql (sync/sql-dissem sql-params)]
+              (util/spit* sql-path sql)
 
-          table-name (format "temp_%s" ts)
-          sql (sync/sql-dissem {:path-csv csv-rel-name
-                                :path-import csv-fix-name
-                                :table-name table-name})
+              (log/infof "Running dissemination SQL from %s" sql-path)
+              (db/execute! sql)
+              (log/info "SQL done."))
 
-          sql-path (join-paths folder "dissemination.sql")]
+            (log/infof "Saving DB dissemination for the URL %s" url-zip)
+            (save-dissemination url-zip)
 
-      (util/spit* sql-path sql)
-      (log/infof "Dissemination SQL is %s" sql-path)
+            (log/infof "Deleting dir %s" folder)
+            (util/rm-rf folder))
 
-      (log/infof "Running dissemination SQL from %s" sql-path)
-      (db/execute! sql)
-      (log/info "SQL done."))
-
-    (log/infof "Deleting dir %s" folder)
-    (util/rm-rf folder))
-
+          (error! "No CSV Dissemination file found in %s" folder)))))
   nil)
 
 (defn- practitioner-exists?
@@ -227,55 +278,58 @@
 (defn- task-full-dissemination-inner
   "See task-full-dissemination docstring."
   []
-  (let [_ (log/info "Parsing download page...")
-        page-tree (parse-dl-page)
+  (log/info "Parsing download page...")
+  (let [page-tree (parse-dl-page)
+        url-zip (parse-dissem-full-url page-tree)]
 
-        url-zip (parse-dissem-full-url page-tree)
+    (if url-zip
+      (log/infof "FULL dissemination URL is %s" url-zip)
+      (error! "FULL dissemination URL is missing"))
 
-        _ (if url-zip
-            (log/infof "FULL dissemination URL is %s" url-zip)
-            (error! "FULL dissemination URL is missing"))
+    (if-let [upd (find-dissemination-full url-zip)]
+      (log/infof "The FULL dissemination URL %s has already been loaded." url-zip)
 
-        ts (time/epoch)
-        folder (format "%s-Full-dissemination" ts)
-        zipname (url->name url-zip)]
+      (let [ts (time/epoch)
+            folder (format "%s-Full-dissemination" ts)
+            zipname (url->name url-zip)]
 
-    (util/in-dir folder
-      (log/infof "Downloading file %s" url-zip)
-      (util/curl url-zip zipname)
-      (log/infof "Unzipping file %s" zipname)
-      (util/un7z zipname)) ;; unzip fails on over-4Gb files
+        (util/in-dir folder
+          (log/infof "Downloading file %s" url-zip)
+          (util/curl url-zip zipname)
+          (log/infof "Unzipping file %s" zipname)
+          ;; 7z but not unzip since the latest fails on over-4Gb files
+          (util/un7z zipname))
 
-    (let [csv-full-path (util/find-file folder re-dissem-full-csv)
+        (if-let [csv-full-path (util/find-file folder re-dissem-full-csv)]
 
-          _ (when-not csv-full-path
-              (error! "No FULL CSV Dissemination file found in %s" folder))
+          (let [fix-name "data.csv"
+                csv-full-dir (dir-name csv-full-path)
+                csv-fix-name (join-paths csv-full-dir fix-name)
+                csv-rel-name (join-paths folder fix-name)
+                table-name (format "temp_%s" ts)
+                sql-params {:path-csv csv-rel-name
+                            :path-import csv-fix-name
+                            :table-name table-name}
+                sql-path (join-paths folder "dissemination-full.sql")]
 
-          fix-name "data.csv"
-          csv-full-dir (dir-name csv-full-path)
-          csv-fix-name (join-paths csv-full-dir fix-name)
-          csv-rel-name (join-paths folder fix-name)
+            (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
+            (heal-csv csv-full-path csv-fix-name)
 
-          _ (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
-          _ (heal-csv csv-full-path csv-fix-name)
+            (log/infof "Saving FULL Dissemination SQL into %s" sql-path)
+            (let [sql (sync/sql-dissem sql-params)]
+              (util/spit* sql-path sql)
 
-          table-name (format "temp_%s" ts)
-          sql (sync/sql-dissem {:path-csv csv-rel-name
-                                :path-import csv-fix-name
-                                :table-name table-name})
+              (log/infof "Running FULL dissemination SQL from %s" sql-path)
+              (db/execute! sql)
+              (log/info "SQL done."))
 
-          sql-path (join-paths folder "dissemination-full.sql")]
+            (log/infof "Saving DB FULL dissemination for the URL %s" url-zip)
+            (save-dissemination-full url-zip)
 
-      (util/spit* sql-path sql)
-      (log/infof "FULL Dissemination SQL is %s" sql-path)
+            (log/infof "Deleting dir %s" folder)
+            (util/rm-rf folder))
 
-      (log/infof "Running FULL dissemination SQL from %s" sql-path)
-      (db/execute! sql)
-      (log/info "SQL done."))
-
-    (log/infof "Deleting dir %s" folder)
-    (util/rm-rf folder))
-
+          (error! "No FULL CSV Dissemination file found in %s" folder)))))
   nil)
 
 (defn task-full-dissemination

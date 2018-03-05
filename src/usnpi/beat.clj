@@ -81,7 +81,7 @@
             (log/infof "Task is done: %s" handler)
             (task-success task)
             (catch Throwable e
-              (log/error e "Task error: %s" handler)
+              (log/errorf e "Task error: %s" handler)
               (task-failure task e)))))
       (catch Throwable e
         (log/error e "Uncaught exception"))
