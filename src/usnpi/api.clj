@@ -1,7 +1,7 @@
-(ns usnpi.env
-  "Misc ENV utils and API."
+(ns usnpi.api
+  "REST API handlers."
   (:require [environ.core]
-            [cheshire.core :as json]
+            [cheshire.core :refer [env]]
             [clojure.string :as str]))
 
 (def ^:private
@@ -19,8 +19,6 @@
       (str/replace "." "-")
       keyword))
 
-(def env environ.core/env)
-
 (defn api-env
   "An API that returns some of ENV vars."
   [request]
@@ -30,3 +28,11 @@
      :headers {"Content-Type" "application/json"}
      :body (json/generate-string
             (into {} (map vector env-fields env-values)))}))
+
+(defn api-updates
+  "Returns the latest NPI updates."
+  [request]
+  {:status 200
+   :headers {"Content-Type" "application/json"}
+   :body (json/generate-string
+          (db/query "select * from npi_updates order by date desc limit 100"))})
