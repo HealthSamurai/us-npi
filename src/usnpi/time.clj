@@ -22,3 +22,5 @@
   "UNIX timestamp in seconds as integer."
   []
   (quot (System/currentTimeMillis) 1000))
+
+(def now t/now)
