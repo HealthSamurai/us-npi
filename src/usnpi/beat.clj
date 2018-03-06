@@ -112,3 +112,10 @@
       (future-cancel @state)
       (log/info "Beat stopped."))
     (error! "The beat was not started or is already stopped.")))
+
+;;
+;; Init part
+;;
+
+(defn init []
+  (start))

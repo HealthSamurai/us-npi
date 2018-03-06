@@ -3,10 +3,10 @@
   (:require [usnpi.sync :as sync]
             [usnpi.npi :as npi]
             [usnpi.util :as util]
-            [usnpi.migrate :as migrate]
             [usnpi.tasks :as tasks]
             [usnpi.beat :as beat]
             [usnpi.api :as api]
+            [usnpi.db :as db]
             [ring.util.codec]
             [ring.util.io]
             [clojure.tools.logging :as log]
@@ -69,10 +69,10 @@
     (server/run-server (cors-mw #'index) {:port port})))
 
 (defn init [& [opt]]
-  (migrate/init)
+  (db/init)
   (util/init)
   (tasks/init)
-  (beat/start)
+  (beat/init)
   (start-server opt))
 
 (defn -main [& _]

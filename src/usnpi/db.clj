@@ -1,8 +1,10 @@
 (ns usnpi.db
   (:require [clojure.java.jdbc :as jdbc]
+            [clj-time.jdbc] ;; extends JDBC protocols
             [honeysql.core :as sql]
             [usnpi.shell :as shell]
-            [clj-time.jdbc] ;; extends SQL protocols
+            [clojure.tools.logging :as log]
+            [migratus.core :as migratus]
             [environ.core :refer [env]]))
 
 (def ^:private
@@ -35,10 +37,14 @@
     (shell/sh "psql" "-f" sql-file)))
 
 (defn to-sql
+  "Local wrapper to turn a map into a SQL string."
   [sqlmap]
   (sql/format sqlmap))
 
-;; Here and below: partial won't work.
+;;
+;; DB API
+;; Here and below: partial doesn't work with binding.
+;;
 
 (defn query [& args]
   (apply jdbc/query *db* args))
@@ -77,3 +83,25 @@
   `(with-trx
      (jdbc/db-set-rollback-only! *db*)
      ~@body))
+
+
+;;
+;; migrations
+;;
+
+(def ^:private
+  mg-cfg {:store :database
+          :migration-dir "migrations"
+          :db *db*})
+
+(defn- migrate []
+  (log/info "Running migrations...")
+  (migratus/migrate mg-cfg)
+  (log/info "Migrations done."))
+
+;;
+;; Init part
+;;
+
+(defn init []
+  (migrate))
