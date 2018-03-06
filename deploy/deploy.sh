@@ -6,7 +6,7 @@ BRANCH=$1 # master
 IMAGE=$2
 
 cat deploy.tpl.yaml \
-    | sed -e 's|<BRANCH>|'"$BRANCH"'|g' \
+    | sed -e "s|<BRANCH>|$BRANCH|g" \
     | sed -e "s|<IMAGE>|$IMAGE|g" \
     | sed -e "s|<GIT_COMMIT>|$GIT_COMMIT|g" \
     | sed -e "s|<DB_HOST>|$DB_HOST|g" \

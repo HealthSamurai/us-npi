@@ -170,5 +170,5 @@ spec:
         - name: BEAT_TIMEOUT
           value: "<BEAT_TIMEOUT>"
         ports:
-        - containerPort: "<PORT>"
+        - containerPort: <PORT>
           protocol: TCP
