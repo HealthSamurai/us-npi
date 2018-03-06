@@ -39,7 +39,7 @@ pipeline:
 
 # Update cluster
 - type: bash
-  command: source env && cd deploy && ./deploy.sh $CI3_BRANCH $NPI_REPO:v_$GIT_COMMIT
+  command: source ./env && cd deploy && ./deploy.sh $CI3_BRANCH $NPI_REPO:v_$GIT_COMMIT
 
 # Save cache
 - type: maven
