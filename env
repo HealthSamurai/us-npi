@@ -1,4 +1,4 @@
-export DB_HOST=localhost
+export DB_HOST=npi-db
 export DB_PORT=5432
 export DB_DATABASE=usnpi
 export DB_USER=postgres
