@@ -104,18 +104,16 @@
 (def ^:private
   re-dissem-full-csv #"(?i)npidata_\d{8}-\d{8}\.csv$")
 
-(defn- file-name
-  [filepath]
-  (-> filepath io/file .getName))
-
-(defn- dir-name
-  [filepath]
-  (-> filepath io/file .getParent))
-
-(defn- join-paths
+(defn- join-path
   [path1 path2 & more]
   (str/join java.io.File/separator
             (into [path1 path2] more)))
+
+(defn- file-near
+  [origin another]
+  (let [file (io/file origin)
+        path (.getParent file)]
+    (.getPath (io/file path another))))
 
 (defn- heal-csv
   "Cuts down empty pairs of double quotes and dummy statements from a CSV file."
@@ -239,25 +237,25 @@
 
         (if-let [csv-full-path (util/find-file folder re-dissem-csv)]
 
-          (let [fix-name "data.csv"
-                csv-full-dir (dir-name csv-full-path)
-                csv-fix-name (join-paths csv-full-dir fix-name)
-                csv-rel-name (join-paths folder fix-name)
+          (let [fix-filename "data.csv"
+                csv-fix-name (file-near csv-full-path fix-filename)
+                csv-rel-name (join-path folder fix-filename)
                 table-name (format "temp_%s" ts)
                 sql-params {:path-csv csv-rel-name
                             :path-import csv-fix-name
                             :table-name table-name}
-                sql-path (join-paths folder "dissemination.sql")]
+                sql-full-path (file-near csv-full-path "dissemination.sql")]
 
             (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
             (heal-csv csv-full-path csv-fix-name)
 
-            (log/infof "Saving dissemination SQL into %s" sql-path)
             (let [sql (sync/sql-dissem sql-params)]
-              (util/spit* sql-path sql)
 
-              (log/infof "Running dissemination SQL from %s" sql-path)
-              (db/psql sql-path) ;; todo path
+              (log/infof "Saving dissemination SQL into %s" sql-full-path)
+              (spit sql-full-path sql)
+
+              (log/infof "Running dissemination SQL from %s" sql-full-path)
+              (db/psql sql-full-path)
               (log/info "SQL done."))
 
             (log/infof "Saving DB dissemination for the URL %s" url-zip)
@@ -302,25 +300,25 @@
 
         (if-let [csv-full-path (util/find-file folder re-dissem-full-csv)]
 
-          (let [fix-name "data.csv"
-                csv-full-dir (dir-name csv-full-path)
-                csv-fix-name (join-paths csv-full-dir fix-name)
-                csv-rel-name (join-paths folder fix-name)
+          (let [fix-filename "data.csv"
+                csv-fix-name (file-near csv-full-path fix-filename)
+                csv-rel-name (join-path folder fix-filename)
                 table-name (format "temp_%s" ts)
                 sql-params {:path-csv csv-rel-name
                             :path-import csv-fix-name
                             :table-name table-name}
-                sql-path (join-paths folder "dissemination-full.sql")]
+                sql-full-path (file-near csv-full-path "dissemination-full.sql")]
 
             (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
             (heal-csv csv-full-path csv-fix-name)
 
-            (log/infof "Saving FULL Dissemination SQL into %s" sql-path)
             (let [sql (sync/sql-dissem sql-params)]
-              (util/spit* sql-path sql)
 
-              (log/infof "Running FULL dissemination SQL from %s" sql-path)
-              (db/psql sql-path) ;; todo path
+              (log/infof "Saving FULL Dissemination SQL into %s" sql-full-path)
+              (spit sql-full-path sql)
+
+              (log/infof "Running FULL dissemination SQL from %s" sql-full-path)
+              (db/psql sql-full-path)
               (log/info "SQL done."))
 
             (log/infof "Saving DB FULL dissemination for the URL %s" url-zip)
