@@ -1,16 +1,38 @@
 (ns usnpi.db
   (:require [clojure.java.jdbc :as jdbc]
             [honeysql.core :as sql]
-            [clj-time.jdbc]
+            [usnpi.shell :as shell]
+            [clj-time.jdbc] ;; extends SQL protocols
             [environ.core :refer [env]]))
 
 (def ^:private
-  default-url
-  "jdbc:postgresql://localhost:5678/usnpi?stringtype=unspecified&user=postgres&password=verysecret")
+  url-template
+  "jdbc:postgresql://%s:%s/%s?stringtype=unspecified&user=%s&password=%s")
+
+(def ^:private
+  db-keys [:db-host :db-port :db-database :db-user :db-password])
+
+(def ^:private
+  db-vals (mapv env db-keys))
+
+(def ^:private
+  pg-keys ["PGHOST" "PGPORT" "PGDATABASE" "PGUSER" "PGPASSWORD"])
+
+(def ^:private
+  pg-env (into {} (map vector pg-keys db-vals)))
+
+(def ^:private
+  db-url (apply format url-template db-vals))
 
 (def ^:dynamic
   *db* {:dbtype "postgresql"
-        :connection-uri (or (env :database-url) default-url)})
+        :connection-uri db-url})
+
+(defn psql
+  "Executes a SQL file using psql utility."
+  [sql-file]
+  (shell/with-env pg-env
+    (shell/sh "psql" "-f" sql-file)))
 
 (defn to-sql
   [sqlmap]
