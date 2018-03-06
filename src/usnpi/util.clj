@@ -171,6 +171,10 @@
          path)))
    (file-seq* path)))
 
+;;
+;; Init part
+;;
+
 (defn init
   "Creates the base dir if it does not exist."
   []
