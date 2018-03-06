@@ -15,3 +15,4 @@ npidata
 env_dev
 env_test
 FHIRTERM_BASE
+deploy/deploy.yaml

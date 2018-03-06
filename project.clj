@@ -28,7 +28,12 @@
   :plugins [[migratus-lein "0.5.7"]]
 
   :migratus {:store :database
-             :db ~(get (System/getenv) "DATABASE_URL")}
+             :db {:dbtype   "postgresql"
+                  :host     ~(get (System/getenv) "DB_HOST")
+                  :port     ~(get (System/getenv) "DB_PORT")
+                  :dbname   ~(get (System/getenv) "DB_DATABASE")
+                  :user     ~(get (System/getenv) "DB_USER")
+                  :password ~(get (System/getenv) "DB_PASSWORD")}}
 
   :main usnpi.core
 

@@ -1,8 +1,8 @@
-export PGHOST=localhost
-export PGPORT=5678
-export PGDATABASE=usnpi
-export PGUSER=postgres
-export PGPASSWORD=verysecret
-export DATABASE_URL="jdbc:postgresql://$PGHOST:$PGPORT/$PGDATABASE?stringtype=unspecified&user=$PGUSER&password=$PGPASSWORD"
+export DB_HOST=localhost
+export DB_PORT=5678
+export DB_DATABASE=usnpi
+export DB_USER=postgres
+export DB_PASSWORD=verysecret
+export PORT=8080
 export FHIRTERM_BASE=/FHIRTERM_BASE
 export BEAT_TIMEOUT=30
