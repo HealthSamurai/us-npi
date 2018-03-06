@@ -8,7 +8,6 @@
             [usnpi.error :refer [error!] :as err]
             [usnpi.time :as time]
             [environ.core :refer [env]]
-            [clj-time.core :as t]
             [clojure.tools.logging :as log]))
 
 (defn- resolve-func [task]
@@ -21,7 +20,7 @@
   "Marks a task as being run at the moment."
   [task]
   (update-task task {:message "Task is running..."
-                     :last_run_at (t/now)}))
+                     :last_run_at (time/now)}))
 
 (defn- task-success [task]
   "Marks a task as being finished successfully."
@@ -45,7 +44,7 @@
    (db/to-sql
     {:select [:*]
      :from [:tasks]
-     :where [:< :next_run_at (t/now)]})))
+     :where [:< :next_run_at (time/now)]})))
 
 ;;
 ;; beat
