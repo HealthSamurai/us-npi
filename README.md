@@ -14,8 +14,7 @@ Clone an `env` file to a Git-ignored `env_dev` as follows:
 cp env env_dev
 ```
 
-Edit this file and provide your own `PG*` values. Pay attention, the database
-URL is constructed automatically by formatting a template. Load the config:
+Edit this file and provide your own `DB_*` values. Load the config:
 
 ```bash
 source env_dev

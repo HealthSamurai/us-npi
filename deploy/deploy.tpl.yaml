@@ -42,8 +42,8 @@ metadata:
 spec:
   ports:
   - protocol: TCP
-    port: 5432
-    targetPort: 5432
+    port: <DB_PORT>
+    targetPort: <DB_PORT>
   selector:
     service: usnpi-db
     environment: master
@@ -63,7 +63,7 @@ spec:
   - name: usnpi
     port: 80
     protocol: TCP
-    targetPort: 8080
+    targetPort: <PORT>
   selector:
     service: usnpi-web
     environment: master
@@ -113,15 +113,15 @@ spec:
           mountPath: /import
         env:
         - name: POSTGRES_USER
-          value: "postgres"
+          value: "<DB_USER>"
         - name: POSTGRES_DB
-          value: "usnpi"
+          value: "<DB_DATABASE>"
         - name: PGDATA
           value: "/data"
-        - name: POSTGRES_PASSWORD 
-          value: verysecret
+        - name: POSTGRES_PASSWORD
+          value: "<DB_PASSWORD>"
         ports:
-        - containerPort: 5432
+        - containerPort: <DB_PORT>
           protocol: TCP
 
 ---
@@ -154,9 +154,21 @@ spec:
         imagePullPolicy: Always
         env:
         - name: PORT
-          value: "8080"
-        - name: DATABASE_URL
-          value: jdbc:postgresql://npi-db:5432/usnpi?stringtype=unspecified&user=postgres&password=verysecret
+          value: "<PORT>"
+        - name: GIT_COMMIT
+          value: "<GIT_COMMIT>"
+        - name: DB_HOST
+          value: "<DB_HOST>"
+        - name: DB_PORT
+          value: "<DB_PORT>"
+        - name: DB_DATABASE
+          value: "<DB_DATABASE>"
+        - name: DB_USER
+          value: "<DB_USER>"
+        - name: DB_PASSWORD
+          value: "<DB_PASSWORD>"
+        - name: BEAT_TIMEOUT
+          value: "<BEAT_TIMEOUT>"
         ports:
-        - containerPort: 8080
+        - containerPort: "<PORT>"
           protocol: TCP
