@@ -1,5 +1,7 @@
 begin;
 
+create extension if not exists pg_trgm;
+
 create table if not exists practitioner (
     id       text primary key,
     resource jsonb null
