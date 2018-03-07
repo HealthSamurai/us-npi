@@ -55,7 +55,7 @@
 
 (defn api-pg-cache-stats
   "Returns Postgres cache statistics: how many cache blocks
-  are loaded a the moment for each relation. A relation might be
+  are loaded at the moment for each relation. A relation might be
   not only a table but also an index, a view, etc."
   [request]
   (json-resp
@@ -77,9 +77,7 @@
    {:status true}))
 
 (defn api-pg-warmup-index
-  "Returns Postgres cache statistics: how many cache blocks
-  are loaded a the moment for each relation. A relation might be
-  not only a table but also an index, a view, etc."
+  "Warms index cache blocks on demand."
   [request]
   (json-resp
    (wm/task-warmup-index)))
