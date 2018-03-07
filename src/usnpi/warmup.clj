@@ -3,6 +3,10 @@
   See http://raghavt.blogspot.ru/2014/06/utilising-caching-contribs-pgprewarm.html"
   (:require [usnpi.db :as db]))
 
+(defn db-settings
+  []
+  (first (db/query "show shared_buffers")))
+
 (defn cache-stats
   []
   (db/query

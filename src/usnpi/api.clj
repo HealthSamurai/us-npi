@@ -53,13 +53,14 @@
   (json-resp
    {:status (beat/status)}))
 
-(defn api-pg-cache-stats
+(defn api-pg-state
   "Returns Postgres cache statistics: how many cache blocks
   are loaded at the moment for each relation. A relation might be
   not only a table but also an index, a view, etc."
   [request]
   (json-resp
-   (wm/cache-stats)))
+   {:cache (wm/cache-stats)
+    :settings (wm/db-settings)}))
 
 ;;
 ;; backboors

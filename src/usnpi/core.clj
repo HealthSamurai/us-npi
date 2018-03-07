@@ -25,7 +25,7 @@
              "updates" {:GET #'api/api-updates}
              "tasks" {:GET #'api/api-tasks}
              "beat" {:GET #'api/api-beat}
-             "cache" {:GET #'api/api-pg-cache-stats}}
+             "db" {:GET #'api/api-pg-state}}
 
    ;; todo: delete in prod release
    "backdoor" {"reset-tasks" {:GET #'api/api-reset-tasks}
