@@ -28,3 +28,9 @@ deploy:
 create-migration:
 	@read -p "Enter migration name: " migration \
 	&& lein migratus create $$migration
+
+docker-build:
+	docker build -t usnpi:$(shell git rev-parse --short HEAD) .
+
+docker-bash:
+	docker run --rm -it usnpi:$(shell git rev-parse --short HEAD) /bin/bash
