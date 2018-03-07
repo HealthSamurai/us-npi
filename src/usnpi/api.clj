@@ -1,6 +1,7 @@
 (ns usnpi.api
   "REST API handlers."
   (:require [usnpi.db :as db]
+            [usnpi.beat :as beat]
             [environ.core :refer [env]]
             [cheshire.core :as json]
             [clojure.string :as str]))
@@ -44,3 +45,9 @@
   [request]
   (json-resp
    (db/query "select * from tasks order by id")))
+
+(defn api-beat
+  "Returns the status of the beat subsystem."
+  [request]
+  (json-resp
+   {:status (beat/status)}))
