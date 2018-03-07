@@ -1,9 +1,8 @@
 FROM java:8
 EXPOSE 8080
 
-CMD apt-get install unzip p7zip curl postgresql-client
-
-ENV DATABASE_URL="ups"
+RUN apt-get -y update
+RUN apt-get -y install unzip p7zip-full curl postgresql-client
 
 ADD target/usnpi.jar /usnpi.jar
 
