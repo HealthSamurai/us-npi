@@ -105,6 +105,9 @@ spec:
       - name: pg
         image: postgres:10
         imagePullPolicy: Always
+        postgresConfig:
+        - key: shared_buffers
+          value: 512MB
         volumeMounts:
         - name: usnpi
           mountPath: /data
