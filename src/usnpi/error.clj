@@ -13,3 +13,11 @@
   (let [class (-> e .getClass .getCanonicalName)
         message (-> e .getMessage (or "<no message>"))]
     (format "Exception: %s %s" class message)))
+
+(defmacro recover
+  "Returns the value if any error occurs in the body."
+  [value & body]
+  `(try
+     ~@body
+     (catch Throwable e#
+       ~value)))

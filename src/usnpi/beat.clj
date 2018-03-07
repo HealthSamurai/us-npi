@@ -54,8 +54,11 @@
   state (atom nil))
 
 (def ^{:private true
-       :doc "A number of seconds between each beat."}
-  timeout (or (:beat-timeout env) (* 60 30)))
+       :doc "A number of milliseconds between each beat."}
+  timeout
+  (err/recover
+   (* 60 30 1000)
+   (-> env :beat-timeout Integer/parseInt (* 1000)))) ;; todo #32 better config
 
 (defn- finished?
   "Checks whether a future was finished no matter successful or not."
@@ -85,7 +88,7 @@
       (catch Throwable e
         (log/error e "Uncaught exception"))
       (finally
-        (Thread/sleep (* 1000 timeout))))))
+        (Thread/sleep timeout)))))
 
 ;;
 ;; public api
