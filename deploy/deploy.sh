@@ -16,7 +16,6 @@ cat deploy.tpl.yaml \
     | sed -e "s|<DB_PASSWORD>|$DB_PASSWORD|g" \
     | sed -e "s|<PORT>|$PORT|g" \
     | sed -e "s|<FHIRTERM_BASE>|$FHIRTERM_BASE|g" \
-    | sed -e "s|<BEAT_TIMEOUT>|$BEAT_TIMEOUT|g" \
     | sed -e "s|<DB_SHARED_BUFFERS>|$DB_SHARED_BUFFERS|g" \
     > deploy.yaml
 

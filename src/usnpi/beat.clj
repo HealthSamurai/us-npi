@@ -7,7 +7,6 @@
   (:require [usnpi.db :as db]
             [usnpi.error :refer [error!] :as err]
             [usnpi.time :as time]
-            [environ.core :refer [env]]
             [clojure.tools.logging :as log]))
 
 (defn- resolve-func [task]
@@ -40,11 +39,7 @@
 (defn- read-tasks
   "Returns all the tasks from the database needed to be run."
   []
-  (db/query
-   (db/to-sql
-    {:select [:*]
-     :from [:tasks]
-     :where [:< :next_run_at (time/now)]})))
+  (db/query "select * from tasks where next_run_at < current_timestamp"))
 
 ;;
 ;; beat
@@ -56,9 +51,7 @@
 (def ^{:private true
        :doc "A number of milliseconds between each beat."}
   timeout
-  (err/recover
-   (* 60 30 1000)
-   (-> env :beat-timeout Integer/parseInt (* 1000)))) ;; todo #32 better config
+  (* 1000 60 1))
 
 (defn- finished?
   "Checks whether a future was finished no matter successful or not."
@@ -70,7 +63,6 @@
   "Starts an endless cycle evaluating tasks in separated futures."
   []
   (while true
-    (log/info "Anoter beat cycle...")
     (try
       (doseq [{:keys [handler] :as task} (read-tasks)]
         (future

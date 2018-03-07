@@ -3,24 +3,7 @@
   (:require [usnpi.db :as db]
             [usnpi.beat :as beat]
             [usnpi.warmup :as wm]
-            [environ.core :refer [env]]
-            [cheshire.core :as json]
-            [clojure.string :as str]))
-
-(def ^:private
-  env-fields
-  [:GIT_COMMIT
-   :FHIRTERM_BASE
-   :BEAT_TIMEOUT])
-
-(defn- turn-field
-  [field]
-  (-> field
-      name
-      str/lower-case
-      (str/replace "_" "-")
-      (str/replace "." "-")
-      keyword))
+            [cheshire.core :as json]))
 
 (defn- json-resp
   [data]
@@ -31,9 +14,9 @@
 (defn api-env
   "An API that returns some of ENV vars."
   [request]
-  (let [new-fields (map turn-field env-fields)
-        env-values (map #(get env %) new-fields)]
-    (json-resp (into {} (map vector env-fields env-values)))))
+  (let [env (into {} (System/getenv))]
+    (json-resp
+     (select-keys env ["GIT_COMMIT" "FHIRTERM_BASE"]))))
 
 (defn api-updates
   "Returns the latest NPI updates."
