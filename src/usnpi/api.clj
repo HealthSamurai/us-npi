@@ -2,6 +2,7 @@
   "REST API handlers."
   (:require [usnpi.db :as db]
             [usnpi.beat :as beat]
+            [usnpi.warmup :as wm]
             [environ.core :refer [env]]
             [cheshire.core :as json]
             [clojure.string :as str]))
@@ -25,7 +26,7 @@
   [data]
   {:status 200
    :headers {"Content-Type" "application/json"}
-   :body (json/generate-string data)})
+   :body (json/generate-string data {:pretty true})})
 
 (defn api-env
   "An API that returns some of ENV vars."
@@ -52,6 +53,18 @@
   (json-resp
    {:status (beat/status)}))
 
+(defn api-pg-cache-stats
+  "Returns Postgres cache statistics: how many cache blocks
+  are loaded at the moment for each relation. A relation might be
+  not only a table but also an index, a view, etc."
+  [request]
+  (json-resp
+   (wm/cache-stats)))
+
+;;
+;; backboors
+;;
+
 (defn api-reset-tasks
   "Resets the DB data to make all the tasks to be run immediately."
   [request]
@@ -62,3 +75,9 @@
     (beat/start))
   (json-resp
    {:status true}))
+
+(defn api-pg-warmup-index
+  "Warms index cache blocks on demand."
+  [request]
+  (json-resp
+   (wm/task-warmup-index)))

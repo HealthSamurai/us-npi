@@ -16,16 +16,20 @@
 
 (def routes
   {:GET (fn [req] {:status 200 :body (pr-str req)})
+
    "practitioner" {:GET #'npi/get-pracitioners
                    "$batch" {:GET #'npi/get-practitioners-by-ids}
                    [:npi] {:GET #'npi/get-practitioner}}
+
    "system" {"env" {:GET #'api/api-env}
              "updates" {:GET #'api/api-updates}
              "tasks" {:GET #'api/api-tasks}
-             "beat" {:GET #'api/api-beat}}
+             "beat" {:GET #'api/api-beat}
+             "cache" {:GET #'api/api-pg-cache-stats}}
 
    ;; todo: delete in prod release
-   "backdoor" {"reset-tasks" {:GET #'api/api-reset-tasks}}})
+   "backdoor" {"reset-tasks" {:GET #'api/api-reset-tasks}
+               "warmup-index" {:GET #'api/api-pg-warmup-index}}})
 
 (defn allow [origin resp]
   (merge-with
