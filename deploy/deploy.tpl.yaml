@@ -105,8 +105,7 @@ spec:
       - name: pg
         image: postgres:10
         imagePullPolicy: Always
-        command: ["postgres"]
-        args: ["-c", "shared_buffers=512MB"]
+        command: ["-c", "shared_buffers=512MB"]
         volumeMounts:
         - name: usnpi
           mountPath: /data
