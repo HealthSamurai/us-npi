@@ -51,3 +51,14 @@
   [request]
   (json-resp
    {:status (beat/status)}))
+
+(defn api-reset-tasks
+  "Resets the DB data to make all the tasks to be run immediately."
+  [request]
+  (db/with-tx
+    (db/execute! "delete from npi_updates")
+    (db/execute! "update tasks set next_run_at = (current_timestamp at time zone 'UTC') + random() * interval '600 seconds'" ))
+  (when-not (beat/status)
+    (beat/start))
+  (json-resp
+   {:status true}))

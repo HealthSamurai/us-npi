@@ -22,7 +22,10 @@
    "system" {"env" {:GET #'api/api-env}
              "updates" {:GET #'api/api-updates}
              "tasks" {:GET #'api/api-tasks}
-             "beat" {:GET #'api/api-beat}}})
+             "beat" {:GET #'api/api-beat}}
+
+   ;; todo: delete in prod release
+   "backdoor" {"reset-tasks" {:GET #'api/api-reset-tasks}}})
 
 (defn allow [origin resp]
   (merge-with
