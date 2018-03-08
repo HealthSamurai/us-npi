@@ -228,6 +228,16 @@
         (save-deactivation url-zip))))
   nil)
 
+(defn- process-dissemination
+  [stream]
+  (let [step 1000
+        practitioners (models/read-practitioners stream)]
+    (db/with-tx
+      (doseq [chunk (by-chunks step practitioners)]
+        (let [rows (map pract->db-row chunk)]
+          (log/infof "Inserting %s dissemination rows..." step)
+          (db/execute! (db/query-insert-practitioners rows)))))))
+
 (defn task-dissemination
   "A regular task that parses the download page, fetches a CSV file
   and inserts/updates the existing practitioners."
@@ -249,13 +259,7 @@
         (when-not result
           (error! "Cannot find a dissemination file an archive."))
 
-        (let [step 1000
-              practitioners (models/read-practitioners stream)]
-          (db/with-tx
-            (doseq [chunk (by-chunks step practitioners)]
-              (let [rows (map pract->db-row chunk)]
-                (log/infof "Inserting %s dissemination rows..." step)
-                (db/execute! (db/query-insert-practitioners rows))))))
+        (process-dissemination stream)
 
         (log/infof "Saving DB dissemination for the URL %s" url-zip)
         (save-dissemination url-zip))))
@@ -281,47 +285,16 @@
     (if-let [upd (find-dissemination-full url-zip)]
       (log/infof "The FULL dissemination URL %s has already been loaded." url-zip)
 
-      (let [ts (time/epoch)
-            folder (format "%s-Full-dissemination" ts)
-            zipname (url->name url-zip)]
+      (let [stream (get-stream url-zip)
+            result (seek-stream stream re-dissem-full-csv)]
 
-        (util/in-dir folder
-          (log/infof "Downloading file %s" url-zip)
-          (util/curl url-zip zipname)
-          (log/infof "Unzipping file %s" zipname)
-          ;; 7z but not unzip since the latest fails on over-4Gb files
-          (util/un7z zipname))
+        (when-not result
+          (error! "Cannot find a FULL dissemination file an archive."))
 
-        (if-let [csv-full-path (util/find-file folder re-dissem-full-csv)]
+        (process-dissemination stream)
 
-          (let [fix-filename "data.csv"
-                csv-fix-name (file-near csv-full-path fix-filename)
-                csv-rel-name (join-path folder fix-filename)
-                table-name (format "temp_%s" ts)
-                sql-params {:path-csv csv-rel-name
-                            :path-import csv-fix-name
-                            :table-name table-name}
-                sql-full-path (file-near csv-full-path "dissemination-full.sql")]
-
-            (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
-            (heal-csv csv-full-path csv-fix-name)
-
-            (let [sql (sync/sql-dissem sql-params)]
-
-              (log/infof "Saving FULL Dissemination SQL into %s" sql-full-path)
-              (spit sql-full-path sql)
-
-              (log/infof "Running FULL dissemination SQL from %s" sql-full-path)
-              (db/psql sql-full-path)
-              (log/info "SQL done."))
-
-            (log/infof "Saving DB FULL dissemination for the URL %s" url-zip)
-            (save-dissemination-full url-zip)
-
-            (log/infof "Deleting dir %s" folder)
-            (util/rm-rf folder))
-
-          (error! "No FULL CSV Dissemination file found in %s" folder)))))
+        (log/infof "Saving DB FULL dissemination for the URL %s" url-zip)
+        (save-dissemination-full url-zip))))
   nil)
 
 (defn task-full-dissemination
