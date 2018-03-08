@@ -1,7 +1,6 @@
 (ns usnpi.core
   (:gen-class)
   (:require [usnpi.npi :as npi]
-            [usnpi.util :as util]
             [usnpi.tasks :as tasks]
             [usnpi.beat :as beat]
             [usnpi.api :as api]
@@ -75,7 +74,6 @@
 
 (defn init [& [opt]]
   (db/init)
-  (util/init)
   (tasks/init)
   (beat/init)
   (start-server opt))
