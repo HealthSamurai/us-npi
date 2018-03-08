@@ -14,7 +14,7 @@
 
 (def ^{:private true
        :doc "How many DB records to update at once."}
-  db-chunk 100)
+  db-chunk 1000)
 
 (def ^:private
   url-base "http://download.cms.gov/nppes")
@@ -85,13 +85,12 @@
 (defn- mark-npi-deleted
   "Marks practitioners as deleted by passed NPIs."
   [npis-all]
-  (db/with-tx
-    (doseq [npis (by-chunks db-chunk npis-all)]
-      (db/execute!
-       (db/to-sql
-        {:update :practitioner
-         :set {:deleted true}
-         :where [:in :id npis]})))))
+  (doseq [npis (by-chunks db-chunk npis-all)]
+    (db/execute!
+     (db/to-sql
+      {:update :practitioner
+       :set {:deleted true}
+       :where [:in :id npis]}))))
 
 (def ^:private
   re-any-xlsx #"(?i)\.xlsx$")
@@ -207,14 +206,13 @@
   nil)
 
 (defn- process-dissemination
+  "Bypass transaction to avoid deadlocks."
   [stream]
-  (let [step 1000
-        practitioners (models/read-practitioners stream)]
-    (db/with-tx
-      (doseq [chunk (by-chunks step practitioners)]
-        (let [rows (map pract->db-row chunk)]
-          (log/infof "Inserting %s dissemination rows..." step)
-          (db/execute! (db/query-insert-practitioners rows)))))))
+  (let [practitioners (models/read-practitioners stream)]
+    (doseq [chunk (by-chunks db-chunk practitioners)]
+      (let [rows (map pract->db-row chunk)]
+        (log/infof "Inserting %s dissemination rows..." db-chunk)
+        (db/execute! (db/query-insert-practitioners rows))))))
 
 (defn task-dissemination
   "A regular task that parses the download page, fetches a CSV file
