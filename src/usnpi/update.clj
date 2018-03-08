@@ -7,8 +7,10 @@
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]
             [clojure.string :as str]
+            [cheshire.core :as json]
             [dk.ative.docjure.spreadsheet :as xls]
             [clj-http.client :as client]
+            [usnpi.models :as models]
             [hickory.core :as hickory]
             [hickory.select :as s])
   (:import java.util.zip.ZipEntry
@@ -124,6 +126,12 @@
    (format "cat %s | sed  -e 's/,\"\"/,/g ; s/\"<UNAVAIL>\"//g' > %s"
            scv-input csv-output)))
 
+(defn- pract->db-row
+  [practitioner]
+  {:id (:id practitioner)
+   :resource (json/generate-string practitioner)
+   :deleted false})
+
 ;;
 ;; updates
 ;;
@@ -235,46 +243,22 @@
     (if-let [upd (find-dissemination url-zip)]
       (log/infof "The dissemination URL %s has already been loaded." url-zip)
 
-      (let [ts (time/epoch)
-            folder (format "%s-Dissemination" ts)
-            zipname (url->name url-zip)]
+      (let [stream (get-stream url-zip)
+            result (seek-stream stream re-dissem-csv)]
 
-        (util/in-dir folder
-          (log/infof "Downloading file %s" url-zip)
-          (util/curl url-zip zipname)
-          (log/infof "Unzipping file %s" zipname)
-          (util/unzip zipname))
+        (when-not result
+          (error! "Cannot find a dissemination file an archive."))
 
-        (if-let [csv-full-path (util/find-file folder re-dissem-csv)]
+        (let [step 1000
+              practitioners (models/read-practitioners stream)]
+          (db/with-tx
+            (doseq [chunk (by-chunks step practitioners)]
+              (let [rows (map pract->db-row chunk)]
+                (log/infof "Inserting %s dissemination rows..." step)
+                (db/execute! (db/query-insert-practitioners rows))))))
 
-          (let [fix-filename "data.csv"
-                csv-fix-name (file-near csv-full-path fix-filename)
-                csv-rel-name (join-path folder fix-filename)
-                table-name (format "temp_%s" ts)
-                sql-params {:path-csv csv-rel-name
-                            :path-import csv-fix-name
-                            :table-name table-name}
-                sql-full-path (file-near csv-full-path "dissemination.sql")]
-
-            (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
-            (heal-csv csv-full-path csv-fix-name)
-
-            (let [sql (sync/sql-dissem sql-params)]
-
-              (log/infof "Saving dissemination SQL into %s" sql-full-path)
-              (spit sql-full-path sql)
-
-              (log/infof "Running dissemination SQL from %s" sql-full-path)
-              (db/psql sql-full-path)
-              (log/info "SQL done."))
-
-            (log/infof "Saving DB dissemination for the URL %s" url-zip)
-            (save-dissemination url-zip)
-
-            (log/infof "Deleting dir %s" folder)
-            (util/rm-rf folder))
-
-          (error! "No CSV Dissemination file found in %s" folder)))))
+        (log/infof "Saving DB dissemination for the URL %s" url-zip)
+        (save-dissemination url-zip))))
   nil)
 
 (defn- practitioner-exists?

@@ -86,6 +86,20 @@
 
 
 ;;
+;; Custom queries
+;;
+
+(defn query-insert-practitioners
+  [values]
+  (let [query-map {:insert-into :practitioner
+                   :values values}
+        extra "ON CONFLICT (id) DO UPDATE SET deleted = EXCLUDED.deleted, resource = EXCLUDED.resource"
+        query-vect (sql/format query-map)
+        query-main (first query-vect)
+        query-full (format "%s %s" query-main extra)]
+    (into [query-full] (rest query-vect))))
+
+;;
 ;; migrations
 ;;
 

@@ -55,7 +55,10 @@
 
 (def ^:private
   spec-practitioner
-  {:name [{:given [:provider_first_name]
+  {:id :npi
+   :resourceType "Practitioner"
+
+   :name [{:given [:provider_first_name]
            :family :provider_last_name_legal_name
            :middle [:provider_middle_name]
            :suffix [:provider_name_suffix_text]
