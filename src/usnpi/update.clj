@@ -10,7 +10,9 @@
             [dk.ative.docjure.spreadsheet :as xls]
             [clj-http.client :as client]
             [hickory.core :as hickory]
-            [hickory.select :as s]))
+            [hickory.select :as s])
+  (:import java.util.zip.ZipEntry
+           java.util.zip.ZipInputStream))
 
 (def ^{:private true
        :doc "How many DB records to update at once."}
@@ -163,6 +165,25 @@
   (partial save-update type-dissemination-full))
 
 ;;
+;; streams
+;;
+
+
+(defn- ^ZipInputStream get-stream
+  [url]
+  (let [resp (client/get url {:as :stream})]
+    (ZipInputStream. (:body resp))))
+
+(defn- seek-stream
+  [^ZipInputStream stream re]
+  (loop []
+    (if-let [^ZipEntry entry (.getNextEntry stream)]
+      (let [filename (.getName entry)]
+        (if (re-find re filename)
+          true
+          (recur))))))
+
+;;
 ;; tasks
 ;;
 
@@ -181,33 +202,22 @@
     (if-let [upd (find-deactivation url-zip)]
       (log/infof "The deactivation URL %s has already been loaded." url-zip)
 
-      (let [ts (time/epoch)
-            folder (format "%s-Deactivation" ts)
-            zipname (url->name url-zip)]
+      (let [stream (get-stream url-zip)
+            result (seek-stream stream re-any-xlsx)]
 
-        (util/in-dir folder
-          (log/infof "Downloading file %s" url-zip)
-          (util/curl url-zip zipname)
-          (log/infof "Unzipping file %s" zipname)
-          (util/unzip zipname))
+        (when-not result
+          (error! "Cannot find a deactivation file an archive."))
 
-        (if-let [xls-path (util/find-file folder re-any-xlsx)]
+        (log/infof "Reading NPIs from a stream")
+        (let [npis (read-deactive-npis stream)]
 
-          (let [_ (log/infof "Reading NPIs from %s" xls-path)
-                npis (read-deactive-npis xls-path)]
+          (log/infof "Found %s NPIs to deactive" (count npis))
 
-            (log/infof "Found %s NPIs to deactive" (count npis))
+          (log/infof "Marking NPIs as deleted with a step of %s" db-chunk)
+          (mark-npi-deleted npis))
 
-            (log/infof "Marking NPIs as deleted with a step of %s" db-chunk)
-            (mark-npi-deleted npis)
-
-            (log/infof "Saving update to the DB with URL %s" url-zip)
-            (save-deactivation url-zip)
-
-            (log/infof "Deleting dir %s" folder)
-            (util/rm-rf folder))
-
-          (error! "No Excel file found in %s" folder)))))
+        (log/infof "Saving update to the DB with URL %s" url-zip)
+        (save-deactivation url-zip))))
   nil)
 
 (defn task-dissemination
