@@ -16,7 +16,7 @@
   [request]
   (let [env (into {} (System/getenv))]
     (json-resp
-     (select-keys env ["GIT_COMMIT" "FHIRTERM_BASE"]))))
+     (select-keys env ["GIT_COMMIT"]))))
 
 (defn api-updates
   "Returns the latest NPI updates."
