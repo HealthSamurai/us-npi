@@ -61,6 +61,18 @@
   (json-resp
    {:status true}))
 
+(defn api-trigger-full-import
+  "Drops the data and runs full import."
+  [request]
+  (db/with-tx
+    (db/execute! "delete from practitioner")
+    (db/execute! "update tasks set next_run_at = now() where handler = 'usnpi.update/task-full-dissemination'")
+    (db/execute! "delete from npi_updates"))
+  (when-not (beat/status)
+    (beat/start))
+  (json-resp
+   {:status true}))
+
 (defn api-pg-warmup-index
   "Warms index cache blocks on demand."
   [request]

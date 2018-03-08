@@ -27,7 +27,8 @@
 
    ;; todo: delete in prod release
    "backdoor" {"reset-tasks" {:GET #'api/api-reset-tasks}
-               "warmup-index" {:GET #'api/api-pg-warmup-index}}})
+               "warmup-index" {:GET #'api/api-pg-warmup-index}
+               "full-import" {:GET #'api/api-trigger-full-import}}})
 
 (defn allow [origin resp]
   (merge-with
