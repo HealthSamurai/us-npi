@@ -1,7 +1,6 @@
 (ns usnpi.core
   (:gen-class)
-  (:require [usnpi.sync :as sync]
-            [usnpi.npi :as npi]
+  (:require [usnpi.npi :as npi]
             [usnpi.util :as util]
             [usnpi.tasks :as tasks]
             [usnpi.beat :as beat]
