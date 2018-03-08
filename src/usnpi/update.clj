@@ -1,10 +1,6 @@
 (ns usnpi.update
   (:require [usnpi.db :as db]
-            [usnpi.time :as time]
             [usnpi.error :refer [error!]]
-            [usnpi.util :as util]
-            [usnpi.sync :as sync]
-            [clojure.java.io :as io]
             [clojure.tools.logging :as log]
             [clojure.string :as str]
             [cheshire.core :as json]
@@ -107,24 +103,6 @@
 ;; npidata_20050523-20180213.csv
 (def ^:private
   re-dissem-full-csv #"(?i)npidata_\d{8}-\d{8}\.csv$")
-
-(defn- join-path
-  [path1 path2 & more]
-  (str/join java.io.File/separator
-            (into [path1 path2] more)))
-
-(defn- file-near
-  [origin another]
-  (let [file (io/file origin)
-        path (.getParent file)]
-    (.getPath (io/file path another))))
-
-(defn- heal-csv
-  "Cuts down empty pairs of double quotes and dummy statements from a CSV file."
-  [scv-input csv-output]
-  (util/exec-in-current-dir!
-   (format "cat %s | sed  -e 's/,\"\"/,/g ; s/\"<UNAVAIL>\"//g' > %s"
-           scv-input csv-output)))
 
 (defn- pract->db-row
   [practitioner]
