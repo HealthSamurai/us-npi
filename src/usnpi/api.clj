@@ -42,7 +42,8 @@
   not only a table but also an index, a view, etc."
   [request]
   (json-resp
-   {:cache (wm/cache-stats)
+   {:rows (db/query "select count(id) from practitioner")
+    :cache (wm/cache-stats)
     :settings (wm/db-settings)}))
 
 ;;
