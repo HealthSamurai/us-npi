@@ -4,20 +4,17 @@
             [honeysql.core :as sql]
             [clojure.tools.logging :as log]
             [migratus.core :as migratus]
-            [environ.core :refer [env]]))
+            [usnpi.env :refer [env]]))
+
 
 (def ^:private
-  url-template
-  "jdbc:postgresql://%s:%s/%s?stringtype=unspecified&user=%s&password=%s")
-
-(def ^:private
-  db-keys [:db-host :db-port :db-database :db-user :db-password])
-
-(def ^:private
-  db-vals (mapv env db-keys))
-
-(def ^:private
-  db-url (apply format url-template db-vals))
+  db-url
+  (format "jdbc:postgresql://%s:%s/%s?stringtype=unspecified&user=%s&password=%s"
+          (:db-host env)
+          (:db-port env)
+          (:db-database env)
+          (:db-user env)
+          (:db-password env)))
 
 (def ^:dynamic
   *db* {:dbtype "postgresql"

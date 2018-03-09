@@ -8,7 +8,7 @@
                  [org.clojure/java.jdbc "0.6.1"]
                  [http-kit "2.2.0"]
                  [clj-time "0.14.2"]
-                 [environ "1.1.0"]
+                 [cprop "0.1.11"]
                  [clj-http "3.7.0"]
                  [cheshire "5.6.3"]
                  [ring/ring-codec "1.1.0"]
