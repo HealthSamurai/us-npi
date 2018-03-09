@@ -167,6 +167,7 @@
   (loop []
     (if-let [^ArchiveEntry entry (.getNextEntry stream)]
       (let [filename (.getName entry)]
+        (log/infof "Zip entry %s found in stream" filename)
         (if (re-find re filename)
           true
           (recur))))))
@@ -236,7 +237,7 @@
             result (seek-stream stream re-dissem-csv)]
 
         (when-not result
-          (error! "Cannot find a dissemination file an archive."))
+          (error! "Cannot find a dissemination file in archive."))
 
         (process-dissemination stream)
 
