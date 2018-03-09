@@ -1,47 +1,52 @@
 (ns usnpi.models
+  "Tools and functions to process business models."
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
             [clojure.data.csv :as csv]))
 
-
 ;;
-;; spec and tools
+;; Rules and tools
 ;;
 
-(defn- postfix [field i]
+(defn- postfix
+  "Adds an index to the end of a keyword."
+  [field i]
   (keyword (format "%s_%s" (name field) i)))
 
-(defn- spec-dispatch [spec _]
+(defn- rule-dispatch
+  "Checks how to treat a rule. Maps with a `:$type` field
+  are processed in a special way."
+  [rule _]
   (cond
-    (map? spec)
-    (if-let [map-type (:$type spec)]
+    (map? rule)
+    (if-let [map-type (:$type rule)]
       map-type :object)
-    (vector? spec) :vector
-    (keyword? spec) :keyword))
+    (vector? rule) :array
+    (keyword? rule) :keyword))
 
 (defmulti ^:private
-  ->practitioner spec-dispatch)
+  ->practitioner rule-dispatch)
 
 (defmethod ->practitioner :default
-  [spec _] spec)
+  [rule _] rule)
 
 (defmethod ->practitioner :object
-  [spec-map data]
+  [rule-map data]
   (not-empty
-   (into {} (for [[k v] spec-map
+   (into {} (for [[k v] rule-map
                   :let [v-new (->practitioner v data)]
                   :when v-new]
               [k v-new]))))
 
 (defmethod ->practitioner :keyword
-  [spec-kw data]
-  (get data spec-kw))
+  [rule-kw data]
+  (get data rule-kw))
 
-(defmethod ->practitioner :vector
-  [spec-vec data]
+(defmethod ->practitioner :array
+  [rule-vec data]
   (not-empty
-   (remove nil? (for [spec-item spec-vec]
-                  (->practitioner spec-item data)))))
+   (remove nil? (for [rule-item rule-vec]
+                  (->practitioner rule-item data)))))
 
 (defmethod ->practitioner :when
   [{:keys [column expression]} data]
@@ -54,7 +59,7 @@
     (get map field)))
 
 (def ^:private
-  spec-practitioner
+  rule-practitioner
   {:id :npi
    :resourceType "Practitioner"
 
@@ -137,7 +142,9 @@
 ;; CSV reading
 ;;
 
-(defn- prepare-header-field [field]
+(defn- prepare-header-field
+  "Turns a CSV header field into a keyword."
+  [field]
   (-> field
       str/trim
       str/lower-case
@@ -145,11 +152,15 @@
       (str/replace #"\s+" "_")
       keyword))
 
-(defn- prepare-row-field [field]
+(defn- prepare-row-field
+  "Cleans dummy values from a CSV field."
+  [field]
   (when-not (or (= field "") (= field "<UNAVAIL>"))
     field))
 
 (defn- read-csv
+  "Returns a lazy sequence of maps.
+  The `src` is either a file path or an input stream."
   [src]
   (let [reader (io/reader src)
         rows (csv/read-csv reader)
@@ -162,6 +173,8 @@
 ;;
 
 (defn read-practitioners
+  "Returns a lazy sequence of `Practitioner` maps.
+  The `src` is either a file path or an input stream."
   [src]
   (for [data (read-csv src)]
-    (->practitioner spec-practitioner data)))
+    (->practitioner rule-practitioner data)))
