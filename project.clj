@@ -20,6 +20,7 @@
                  [dk.ative/docjure "1.12.0"]
                  [hickory "0.7.1"]
                  [honeysql "0.9.1"]
+                 [org.apache.commons/commons-compress "1.5"] ;; better support for zip-streams
                  [route-map "0.0.6"]]
 
   :plugins [[migratus-lein "0.5.7"]]
