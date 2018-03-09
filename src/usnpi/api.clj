@@ -2,6 +2,7 @@
   "REST API handlers."
   (:require [usnpi.db :as db]
             [usnpi.beat :as beat]
+            [usnpi.env :refer [env]]
             [usnpi.warmup :as wm]
             [cheshire.core :as json]))
 
@@ -14,9 +15,8 @@
 (defn api-env
   "An API that returns some of ENV vars."
   [request]
-  (let [env (into {} (System/getenv))]
-    (json-resp
-     (select-keys env ["GIT_COMMIT"]))))
+  (json-resp
+   (select-keys env [:git-commit])))
 
 (defn api-updates
   "Returns the latest NPI updates."

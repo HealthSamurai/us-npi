@@ -5,4 +5,4 @@ export DB_USER=postgres
 export DB_PASSWORD=verysecret
 export DB_SHARED_BUFFERS=2500MB
 export PORT=8080
-export FHIRTERM_BASE=/FHIRTERM_BASE
+export API_OPS=true

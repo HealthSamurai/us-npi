@@ -9,9 +9,12 @@
 
 (s/def ::port int?)
 
+(s/def ::api-ops boolean?)
+
 (s/def ::env (s/keys :req-un [::db-host
                               ::db-port
                               ::db-database
                               ::db-user
                               ::db-password
-                              ::port]))
+                              ::port
+                              ::api-ops]))

@@ -5,15 +5,22 @@
             [usnpi.beat :as beat]
             [usnpi.api :as api]
             [usnpi.db :as db]
-            [usnpi.env :as env]
+            [usnpi.env :as env :refer [env]]
             [clojure.tools.logging :as log]
             [org.httpkit.server :as server]
             [clojure.string :as str]
             [route-map.core :as routing]))
 
-(defn form-decode [s] (clojure.walk/keywordize-keys (ring.util.codec/form-decode s)))
+(defn form-decode [s]
+  (clojure.walk/keywordize-keys (ring.util.codec/form-decode s)))
 
-(def routes
+(def routes-ops
+  "A set of routes that cause sensible changes. For dev or non-public usage."
+  {"ops" {"reset-tasks" {:GET #'api/api-reset-tasks}
+               "warmup-index" {:GET #'api/api-pg-warmup-index}
+               "full-import" {:GET #'api/api-trigger-full-import}}})
+
+(def routes-common
   {:GET (fn [req] {:status 200 :body (pr-str req)})
 
    "practitioner" {:GET #'npi/get-pracitioners
@@ -24,12 +31,12 @@
              "updates" {:GET #'api/api-updates}
              "tasks" {:GET #'api/api-tasks}
              "beat" {:GET #'api/api-beat}
-             "db" {:GET #'api/api-pg-state}}
+             "db" {:GET #'api/api-pg-state}}})
 
-   ;; todo: delete in prod release
-   "backdoor" {"reset-tasks" {:GET #'api/api-reset-tasks}
-               "warmup-index" {:GET #'api/api-pg-warmup-index}
-               "full-import" {:GET #'api/api-trigger-full-import}}})
+(def routes
+  (cond-> routes-common
+    (:api-ops env)
+    (merge routes-ops)))
 
 (defn allow [origin resp]
   (merge-with
