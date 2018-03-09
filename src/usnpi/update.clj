@@ -205,7 +205,7 @@
           (log/infof "Marking NPIs as deleted with a step of %s" db-chunk)
           (mark-npi-deleted npis))
 
-        (log/infof "Saving update to the DB with URL %s" url-zip)
+        (log/infof "Saving deactivation update with URL %s" url-zip)
         (save-deactivation url-zip))))
   nil)
 
@@ -241,7 +241,7 @@
 
         (process-dissemination stream)
 
-        (log/infof "Saving DB dissemination for the URL %s" url-zip)
+        (log/infof "Saving DB dissemination update with URL %s" url-zip)
         (save-dissemination url-zip))))
   nil)
 
@@ -273,7 +273,7 @@
 
         (process-dissemination stream)
 
-        (log/infof "Saving DB FULL dissemination for the URL %s" url-zip)
+        (log/infof "Saving DB FULL dissemination update with URL %s" url-zip)
         (save-dissemination-full url-zip))))
   nil)
 
