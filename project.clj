@@ -1,9 +1,9 @@
 (defproject usnpi "0.1.0-SNAPSHOT"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+  :description "US NPI registry in FHIR"
+  :url "https://npi.health-samurai.io/"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.9.0-alpha16"]
+  :dependencies [[org.clojure/clojure "1.9.0"]
                  [cheshire "5.6.3"]
                  [org.clojure/java.jdbc "0.6.1"]
                  [http-kit "2.2.0"]
