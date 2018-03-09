@@ -176,5 +176,6 @@
   "Returns a lazy sequence of `Practitioner` maps.
   The `src` is either a file path or an input stream."
   [src]
-  (for [data (read-csv src)]
+  (for [data (read-csv src)
+        :when (-> data :entity_type_code (= "1"))]
     (->practitioner rule-practitioner data)))
