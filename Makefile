@@ -34,3 +34,6 @@ docker-build:
 
 docker-bash:
 	docker run --rm -it usnpi:$(shell git rev-parse --short HEAD) /bin/bash
+
+git-commit:
+	@echo $(shell git rev-parse --short HEAD)
