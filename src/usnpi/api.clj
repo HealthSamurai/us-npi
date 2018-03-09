@@ -53,7 +53,7 @@
   "Resets the DB data to make all the tasks to be run immediately."
   [request]
   (db/with-tx
-    (db/execute! "truncate npi_updates")
+    (db/execute! "delete from npi_updates")
     (db/execute! "update tasks set next_run_at = (current_timestamp at time zone 'UTC') + random() * interval '600 seconds'" ))
   (when-not (beat/status)
     (beat/start))
@@ -64,9 +64,9 @@
   "Drops the data and runs full import."
   [request]
   (db/with-tx
-    (db/execute! "truncate practitioner")
+    (db/execute! "delete from practitioner")
     (db/execute! "update tasks set next_run_at = now() where handler = 'usnpi.update/task-full-dissemination'")
-    (db/execute! "truncate npi_updates"))
+    (db/execute! "delete from npi_updates"))
   (when-not (beat/status)
     (beat/start))
   (json-resp
