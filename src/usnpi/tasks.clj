@@ -34,7 +34,7 @@
     :offset (+ hour (* minute 40))}
 
    {:handler (func->str #'wm/task-warmup-index)
-    :interval (* minute 5)
+    :interval (* minute 10)
     :offset minute}])
 
 (defn- task-exists?
