@@ -8,12 +8,22 @@
     </encoder>
   </appender>
 
+  <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+    <file>usnpi.log</file>
+    <append>false</append>
+    <encoder>
+      <pattern>%date{ISO8601} %-5level %logger{36} - %msg %n</pattern>
+    </encoder>
+  </appender>
+
   <logger name="usnpi" level="DEBUG" additivity="false">
     <appender-ref ref="STDOUT"/>
+    <appender-ref ref="FILE"/>
   </logger>
 
   <logger name="migratus" level="DEBUG" additivity="false">
     <appender-ref ref="STDOUT"/>
+    <appender-ref ref="FILE"/>
   </logger>
 
   <!-- <root level="INFO"> -->

@@ -46,7 +46,7 @@
     :settings (wm/db-settings)}))
 
 ;;
-;; backboors
+;; Ops
 ;;
 
 (defn api-reset-tasks
@@ -77,3 +77,9 @@
   [request]
   (json-resp
    (wm/task-warmup-index)))
+
+(defn api-logs
+  "Returns a log data."
+  [request]
+  {:status 200
+   :body (slurp "usnpi.log")})

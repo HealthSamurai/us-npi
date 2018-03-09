@@ -17,8 +17,9 @@
 (def routes-ops
   "A set of routes that cause sensible changes. For dev or non-public usage."
   {"ops" {"reset-tasks" {:GET #'api/api-reset-tasks}
-               "warmup-index" {:GET #'api/api-pg-warmup-index}
-               "full-import" {:GET #'api/api-trigger-full-import}}})
+          "warmup-index" {:GET #'api/api-pg-warmup-index}
+          "logs" {:GET #'api/api-logs}
+          "full-import" {:GET #'api/api-trigger-full-import}}})
 
 (def routes-common
   {:GET (fn [req] {:status 200 :body (pr-str req)})
