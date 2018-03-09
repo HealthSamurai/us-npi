@@ -9,8 +9,8 @@
             [usnpi.models :as models]
             [hickory.core :as hickory]
             [hickory.select :as s])
-  (:import java.util.zip.ZipEntry
-           java.util.zip.ZipInputStream))
+  (:import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
+           org.apache.commons.compress.archivers.ArchiveEntry))
 
 (def ^{:private true
        :doc "How many DB records to update at once."}
@@ -153,16 +153,19 @@
 ;; streams
 ;;
 
-
-(defn- ^ZipInputStream get-stream
+(defn- ^ZipArchiveInputStream get-stream
+  "Returns a zip stream for a URL."
   [url]
   (let [resp (client/get url {:as :stream})]
-    (ZipInputStream. (:body resp))))
+    (-> resp :body ZipArchiveInputStream.)))
 
 (defn- seek-stream
-  [^ZipInputStream stream re]
+  "For a given zip stream, trues to position its internal pointer
+  to a specific file entry matching its name against a given pattern.
+  Returns true or false meaning whether it was successful or not."
+  [^ZipArchiveInputStream stream re]
   (loop []
-    (if-let [^ZipEntry entry (.getNextEntry stream)]
+    (if-let [^ArchiveEntry entry (.getNextEntry stream)]
       (let [filename (.getName entry)]
         (if (re-find re filename)
           true
