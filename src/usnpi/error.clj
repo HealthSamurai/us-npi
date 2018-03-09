@@ -7,17 +7,15 @@
   ([tpl & args]
    (error! (apply format tpl args))))
 
+(defn- shrink
+  [str limit]
+  (if (> (count str) limit)
+    (subs str 0 limit)
+    str))
+
 (defn ^String exc-msg
   "Returns a message string for an exception instance."
   [^Exception e]
   (let [class (-> e .getClass .getCanonicalName)
         message (-> e .getMessage (or "<no message>"))]
-    (format "Exception: %s %s" class message)))
-
-(defmacro recover
-  "Returns the value if any error occurs in the body."
-  [value & body]
-  `(try
-     ~@body
-     (catch Throwable e#
-       ~value)))
+    (shrink (format "%s: %s" class message) 255)))
