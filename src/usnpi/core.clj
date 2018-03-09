@@ -5,6 +5,7 @@
             [usnpi.beat :as beat]
             [usnpi.api :as api]
             [usnpi.db :as db]
+            [usnpi.env :as env]
             [clojure.tools.logging :as log]
             [org.httpkit.server :as server]
             [clojure.string :as str]
@@ -74,6 +75,7 @@
     (server/run-server (cors-mw #'index) {:port port})))
 
 (defn init [& [opt]]
+  (env/init)
   (db/init)
   (tasks/init)
   (beat/init)
