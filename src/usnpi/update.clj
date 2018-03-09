@@ -194,7 +194,7 @@
             result (seek-stream stream re-any-xlsx)]
 
         (when-not result
-          (error! "Cannot find a deactivation file an archive."))
+          (error! "Cannot find a deactivation file in archive."))
 
         (log/infof "Reading NPIs from a stream")
         (let [npis (read-deactive-npis stream)]
