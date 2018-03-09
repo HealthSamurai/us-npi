@@ -1,20 +1,20 @@
 (ns usnpi.update
   (:require [usnpi.db :as db]
-            [usnpi.time :as time]
             [usnpi.error :refer [error!]]
-            [usnpi.util :as util]
-            [usnpi.sync :as sync]
-            [clojure.java.io :as io]
             [clojure.tools.logging :as log]
             [clojure.string :as str]
+            [cheshire.core :as json]
             [dk.ative.docjure.spreadsheet :as xls]
             [clj-http.client :as client]
+            [usnpi.models :as models]
             [hickory.core :as hickory]
-            [hickory.select :as s]))
+            [hickory.select :as s])
+  (:import java.util.zip.ZipEntry
+           java.util.zip.ZipInputStream))
 
 (def ^{:private true
        :doc "How many DB records to update at once."}
-  db-chunk 100)
+  db-chunk 1000)
 
 (def ^:private
   url-base "http://download.cms.gov/nppes")
@@ -85,13 +85,12 @@
 (defn- mark-npi-deleted
   "Marks practitioners as deleted by passed NPIs."
   [npis-all]
-  (db/with-tx
-    (doseq [npis (by-chunks db-chunk npis-all)]
-      (db/execute!
-       (db/to-sql
-        {:update :practitioner
-         :set {:deleted true}
-         :where [:in :id npis]})))))
+  (doseq [npis (by-chunks db-chunk npis-all)]
+    (db/execute!
+     (db/to-sql
+      {:update :practitioner
+       :set {:deleted true}
+       :where [:in :id npis]}))))
 
 (def ^:private
   re-any-xlsx #"(?i)\.xlsx$")
@@ -104,23 +103,11 @@
 (def ^:private
   re-dissem-full-csv #"(?i)npidata_\d{8}-\d{8}\.csv$")
 
-(defn- join-path
-  [path1 path2 & more]
-  (str/join java.io.File/separator
-            (into [path1 path2] more)))
-
-(defn- file-near
-  [origin another]
-  (let [file (io/file origin)
-        path (.getParent file)]
-    (.getPath (io/file path another))))
-
-(defn- heal-csv
-  "Cuts down empty pairs of double quotes and dummy statements from a CSV file."
-  [scv-input csv-output]
-  (util/exec-in-current-dir!
-   (format "cat %s | sed  -e 's/,\"\"/,/g ; s/\"<UNAVAIL>\"//g' > %s"
-           scv-input csv-output)))
+(defn- pract->db-row
+  [practitioner]
+  {:id (:id practitioner)
+   :resource (json/generate-string practitioner)
+   :deleted false})
 
 ;;
 ;; updates
@@ -163,6 +150,25 @@
   (partial save-update type-dissemination-full))
 
 ;;
+;; streams
+;;
+
+
+(defn- ^ZipInputStream get-stream
+  [url]
+  (let [resp (client/get url {:as :stream})]
+    (ZipInputStream. (:body resp))))
+
+(defn- seek-stream
+  [^ZipInputStream stream re]
+  (loop []
+    (if-let [^ZipEntry entry (.getNextEntry stream)]
+      (let [filename (.getName entry)]
+        (if (re-find re filename)
+          true
+          (recur))))))
+
+;;
 ;; tasks
 ;;
 
@@ -181,34 +187,32 @@
     (if-let [upd (find-deactivation url-zip)]
       (log/infof "The deactivation URL %s has already been loaded." url-zip)
 
-      (let [ts (time/epoch)
-            folder (format "%s-Deactivation" ts)
-            zipname (url->name url-zip)]
+      (let [stream (get-stream url-zip)
+            result (seek-stream stream re-any-xlsx)]
 
-        (util/in-dir folder
-          (log/infof "Downloading file %s" url-zip)
-          (util/curl url-zip zipname)
-          (log/infof "Unzipping file %s" zipname)
-          (util/unzip zipname))
+        (when-not result
+          (error! "Cannot find a deactivation file an archive."))
 
-        (if-let [xls-path (util/find-file folder re-any-xlsx)]
+        (log/infof "Reading NPIs from a stream")
+        (let [npis (read-deactive-npis stream)]
 
-          (let [_ (log/infof "Reading NPIs from %s" xls-path)
-                npis (read-deactive-npis xls-path)]
+          (log/infof "Found %s NPIs to deactive" (count npis))
 
-            (log/infof "Found %s NPIs to deactive" (count npis))
+          (log/infof "Marking NPIs as deleted with a step of %s" db-chunk)
+          (mark-npi-deleted npis))
 
-            (log/infof "Marking NPIs as deleted with a step of %s" db-chunk)
-            (mark-npi-deleted npis)
-
-            (log/infof "Saving update to the DB with URL %s" url-zip)
-            (save-deactivation url-zip)
-
-            (log/infof "Deleting dir %s" folder)
-            (util/rm-rf folder))
-
-          (error! "No Excel file found in %s" folder)))))
+        (log/infof "Saving update to the DB with URL %s" url-zip)
+        (save-deactivation url-zip))))
   nil)
+
+(defn- process-dissemination
+  "Bypass transaction to avoid deadlocks."
+  [stream]
+  (let [practitioners (models/read-practitioners stream)]
+    (doseq [chunk (by-chunks db-chunk practitioners)]
+      (let [rows (map pract->db-row chunk)]
+        (log/infof "Inserting %s dissemination rows..." db-chunk)
+        (db/execute! (db/query-insert-practitioners rows))))))
 
 (defn task-dissemination
   "A regular task that parses the download page, fetches a CSV file
@@ -225,46 +229,16 @@
     (if-let [upd (find-dissemination url-zip)]
       (log/infof "The dissemination URL %s has already been loaded." url-zip)
 
-      (let [ts (time/epoch)
-            folder (format "%s-Dissemination" ts)
-            zipname (url->name url-zip)]
+      (let [stream (get-stream url-zip)
+            result (seek-stream stream re-dissem-csv)]
 
-        (util/in-dir folder
-          (log/infof "Downloading file %s" url-zip)
-          (util/curl url-zip zipname)
-          (log/infof "Unzipping file %s" zipname)
-          (util/unzip zipname))
+        (when-not result
+          (error! "Cannot find a dissemination file an archive."))
 
-        (if-let [csv-full-path (util/find-file folder re-dissem-csv)]
+        (process-dissemination stream)
 
-          (let [fix-filename "data.csv"
-                csv-fix-name (file-near csv-full-path fix-filename)
-                csv-rel-name (join-path folder fix-filename)
-                table-name (format "temp_%s" ts)
-                sql-params {:path-csv csv-rel-name
-                            :path-import csv-fix-name
-                            :table-name table-name}
-                sql-full-path (file-near csv-full-path "dissemination.sql")]
-
-            (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
-            (heal-csv csv-full-path csv-fix-name)
-
-            (let [sql (sync/sql-dissem sql-params)]
-
-              (log/infof "Saving dissemination SQL into %s" sql-full-path)
-              (spit sql-full-path sql)
-
-              (log/infof "Running dissemination SQL from %s" sql-full-path)
-              (db/psql sql-full-path)
-              (log/info "SQL done."))
-
-            (log/infof "Saving DB dissemination for the URL %s" url-zip)
-            (save-dissemination url-zip)
-
-            (log/infof "Deleting dir %s" folder)
-            (util/rm-rf folder))
-
-          (error! "No CSV Dissemination file found in %s" folder)))))
+        (log/infof "Saving DB dissemination for the URL %s" url-zip)
+        (save-dissemination url-zip))))
   nil)
 
 (defn- practitioner-exists?
@@ -287,47 +261,16 @@
     (if-let [upd (find-dissemination-full url-zip)]
       (log/infof "The FULL dissemination URL %s has already been loaded." url-zip)
 
-      (let [ts (time/epoch)
-            folder (format "%s-Full-dissemination" ts)
-            zipname (url->name url-zip)]
+      (let [stream (get-stream url-zip)
+            result (seek-stream stream re-dissem-full-csv)]
 
-        (util/in-dir folder
-          (log/infof "Downloading file %s" url-zip)
-          (util/curl url-zip zipname)
-          (log/infof "Unzipping file %s" zipname)
-          ;; 7z but not unzip since the latest fails on over-4Gb files
-          (util/un7z zipname))
+        (when-not result
+          (error! "Cannot find a FULL dissemination file an archive."))
 
-        (if-let [csv-full-path (util/find-file folder re-dissem-full-csv)]
+        (process-dissemination stream)
 
-          (let [fix-filename "data.csv"
-                csv-fix-name (file-near csv-full-path fix-filename)
-                csv-rel-name (join-path folder fix-filename)
-                table-name (format "temp_%s" ts)
-                sql-params {:path-csv csv-rel-name
-                            :path-import csv-fix-name
-                            :table-name table-name}
-                sql-full-path (file-near csv-full-path "dissemination-full.sql")]
-
-            (log/infof "Healing CSV: %s to %s" csv-full-path csv-fix-name)
-            (heal-csv csv-full-path csv-fix-name)
-
-            (let [sql (sync/sql-dissem sql-params)]
-
-              (log/infof "Saving FULL Dissemination SQL into %s" sql-full-path)
-              (spit sql-full-path sql)
-
-              (log/infof "Running FULL dissemination SQL from %s" sql-full-path)
-              (db/psql sql-full-path)
-              (log/info "SQL done."))
-
-            (log/infof "Saving DB FULL dissemination for the URL %s" url-zip)
-            (save-dissemination-full url-zip)
-
-            (log/infof "Deleting dir %s" folder)
-            (util/rm-rf folder))
-
-          (error! "No FULL CSV Dissemination file found in %s" folder)))))
+        (log/infof "Saving DB FULL dissemination for the URL %s" url-zip)
+        (save-dissemination-full url-zip))))
   nil)
 
 (defn task-full-dissemination

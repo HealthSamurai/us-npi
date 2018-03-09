@@ -16,7 +16,7 @@
   [request]
   (let [env (into {} (System/getenv))]
     (json-resp
-     (select-keys env ["GIT_COMMIT" "FHIRTERM_BASE"]))))
+     (select-keys env ["GIT_COMMIT"]))))
 
 (defn api-updates
   "Returns the latest NPI updates."
@@ -55,6 +55,18 @@
   (db/with-tx
     (db/execute! "delete from npi_updates")
     (db/execute! "update tasks set next_run_at = (current_timestamp at time zone 'UTC') + random() * interval '600 seconds'" ))
+  (when-not (beat/status)
+    (beat/start))
+  (json-resp
+   {:status true}))
+
+(defn api-trigger-full-import
+  "Drops the data and runs full import."
+  [request]
+  (db/with-tx
+    (db/execute! "delete from practitioner")
+    (db/execute! "update tasks set next_run_at = now() where handler = 'usnpi.update/task-full-dissemination'")
+    (db/execute! "delete from npi_updates"))
   (when-not (beat/status)
     (beat/start))
   (json-resp
