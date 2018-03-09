@@ -4,46 +4,9 @@
   A task has a `:handler` sting field that points to an existing
   function of zero arguments. E.g: 'my.project/some-function'. Then
   it's resolved and run."
-  (:require [usnpi.db :as db]
-            [usnpi.error :refer [error!] :as err]
-            [usnpi.time :as time]
+  (:require [usnpi.tasks :as tasks]
+            [usnpi.error :refer [error!]]
             [clojure.tools.logging :as log]))
-
-(defn- resolve-func [task]
-  (-> task :handler symbol resolve))
-
-(defn- update-task [task fields]
-  (db/update! :tasks fields ["id = ?" (:id task)]))
-
-(defn- task-running
-  "Marks a task as being run at the moment."
-  [task]
-  (update-task task {:message "Task is running..."
-                     :last_run_at (time/now)}))
-
-(defn- task-success [task]
-  "Marks a task as being finished successfully."
-  (let [run-at (-> task :interval time/next-time)]
-    (update-task task {:success true
-                       :message "Successfully run."
-                       :next_run_at run-at})))
-
-(defn- task-failure
-  "Marks a task as being failed because of exception."
-  [task e]
-  (let [run-at (-> task :interval time/next-time)]
-    (update-task task {:success false
-                       :message (err/exc-msg e)
-                       :next_run_at run-at})))
-
-(defn- read-tasks
-  "Returns all the tasks from the database needed to be run."
-  []
-  (db/query "select * from tasks where next_run_at < current_timestamp"))
-
-;;
-;; beat
-;;
 
 (defonce ^:private
   state (atom nil))
@@ -64,26 +27,15 @@
   []
   (while true
     (try
-      (doseq [{:keys [handler] :as task} (read-tasks)]
-        (future
-          (try
-            (log/infof "Starting task: %s" handler)
-            (task-running task)
-            (if-let [func (resolve-func task)]
-              (func)
-              (error! "Cannot resolve a task: %s" handler))
-            (log/infof "Task is done: %s" handler)
-            (task-success task)
-            (catch Throwable e
-              (log/errorf e "Task error: %s" handler)
-              (task-failure task e)))))
+      (doseq [task (tasks/task-list)]
+        (future (tasks/task-process task)))
       (catch Throwable e
         (log/error e "Uncaught exception"))
       (finally
         (Thread/sleep timeout)))))
 
 ;;
-;; public api
+;; Beat API
 ;;
 
 (defn status []
