@@ -16,6 +16,7 @@
                  [ch.qos.logback/logback-classic "1.2.3"]
                  [org.postgresql/postgresql "9.4.1211.jre7"]
                  [migratus "1.0.6"]
+                 [org.clojure/data.csv "0.1.4"]
                  [dk.ative/docjure "1.12.0"]
                  [hickory "0.7.1"]
                  [honeysql "0.9.1"]

@@ -1,8 +1,6 @@
 (ns usnpi.core
   (:gen-class)
-  (:require [usnpi.sync :as sync]
-            [usnpi.npi :as npi]
-            [usnpi.util :as util]
+  (:require [usnpi.npi :as npi]
             [usnpi.tasks :as tasks]
             [usnpi.beat :as beat]
             [usnpi.api :as api]
@@ -29,7 +27,8 @@
 
    ;; todo: delete in prod release
    "backdoor" {"reset-tasks" {:GET #'api/api-reset-tasks}
-               "warmup-index" {:GET #'api/api-pg-warmup-index}}})
+               "warmup-index" {:GET #'api/api-pg-warmup-index}
+               "full-import" {:GET #'api/api-trigger-full-import}}})
 
 (defn allow [origin resp]
   (merge-with
@@ -76,7 +75,6 @@
 
 (defn init [& [opt]]
   (db/init)
-  (util/init)
   (tasks/init)
   (beat/init)
   (start-server opt))

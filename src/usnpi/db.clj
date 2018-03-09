@@ -2,7 +2,6 @@
   (:require [clojure.java.jdbc :as jdbc]
             [clj-time.jdbc] ;; extends JDBC protocols
             [honeysql.core :as sql]
-            [usnpi.shell :as shell]
             [clojure.tools.logging :as log]
             [migratus.core :as migratus]
             [environ.core :refer [env]]))
@@ -18,23 +17,11 @@
   db-vals (mapv env db-keys))
 
 (def ^:private
-  pg-keys ["PGHOST" "PGPORT" "PGDATABASE" "PGUSER" "PGPASSWORD"])
-
-(def ^:private
-  pg-env (into {} (map vector pg-keys db-vals)))
-
-(def ^:private
   db-url (apply format url-template db-vals))
 
 (def ^:dynamic
   *db* {:dbtype "postgresql"
         :connection-uri db-url})
-
-(defn psql
-  "Executes a SQL file using psql utility."
-  [sql-file]
-  (shell/with-env pg-env
-    (shell/sh "psql" "-f" sql-file)))
 
 (defn to-sql
   "Local wrapper to turn a map into a SQL string."
@@ -84,6 +71,20 @@
      (jdbc/db-set-rollback-only! *db*)
      ~@body))
 
+
+;;
+;; Custom queries
+;;
+
+(defn query-insert-practitioners
+  [values]
+  (let [query-map {:insert-into :practitioner
+                   :values values}
+        extra "ON CONFLICT (id) DO UPDATE SET deleted = EXCLUDED.deleted, resource = EXCLUDED.resource"
+        query-vect (sql/format query-map)
+        query-main (first query-vect)
+        query-full (format "%s %s" query-main extra)]
+    (into [query-full] (rest query-vect))))
 
 ;;
 ;; migrations

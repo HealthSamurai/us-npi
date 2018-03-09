@@ -14,5 +14,4 @@ npidata
 .DS_Store
 env_dev
 env_test
-FHIRTERM_BASE
 deploy/deploy.yaml
