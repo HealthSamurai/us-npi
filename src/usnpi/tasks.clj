@@ -120,19 +120,23 @@
                          :next_run_at run-at
                          :message "Task created."}))))
 
-;;
-;; Init
-;;
-
-(defn init
+(defn- seed-tasks
   "Scans through the declared tasks and adds those of them
-  into the database that are missing. Then stars the beat cycle."
+  into the database that are missing."
   []
-  (log/info "Seeding regular tasks...")
   (doseq [{:keys [handler interval offset]} tasks]
     (when-not (task-exists? handler)
       (let [db-task (seed-task handler interval offset)
             {:keys [id next_run_at]} db-task]
         (log/infof "Task %s with DB ID %s scheduled on %s"
-                   handler id next_run_at))))
+                   handler id next_run_at)))))
+
+;;
+;; Init
+;;
+
+(defn init
+  []
+  (log/info "Seeding regular tasks...")
+  (seed-tasks)
   (log/info "Tasks done."))
