@@ -33,10 +33,6 @@ make
 # or make uberjar-build uberjar-run
 ```
 
-Make sure you've got `sed`, `unzip` and `7z` command line tools installed and
-accessible from your PATH. You'll also need `psql` tool installed which is a
-part of `postgresql-client` package.
-
 ## TODO
 
 * Make it autonomous - i.e. save loaded months; check for updates - download and install updates
