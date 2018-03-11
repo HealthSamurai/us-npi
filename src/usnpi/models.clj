@@ -24,38 +24,41 @@
     (vector? rule) :array
     (keyword? rule) :keyword))
 
-(defmulti ^:private
-  ->practitioner rule-dispatch)
+(defmulti
+  ^{:private true
+    :doc "Takes a rule map and a data map and returns a new model map."
+    :arglists '([rule data])}
+  rule-expand rule-dispatch)
 
-(defmethod ->practitioner :default
+(defmethod rule-expand :default
   [rule _] rule)
 
-(defmethod ->practitioner :object
+(defmethod rule-expand :object
   [rule-map data]
   (not-empty
    (into {} (for [[k v] rule-map
-                  :let [v-new (->practitioner v data)]
+                  :let [v-new (rule-expand v data)]
                   :when v-new]
               [k v-new]))))
 
-(defmethod ->practitioner :keyword
+(defmethod rule-expand :keyword
   [rule-kw data]
   (get data rule-kw))
 
-(defmethod ->practitioner :array
+(defmethod rule-expand :array
   [rule-vec data]
   (not-empty
    (remove nil? (for [rule-item rule-vec]
-                  (->practitioner rule-item data)))))
+                  (rule-expand rule-item data)))))
 
-(defmethod ->practitioner :when
+(defmethod rule-expand :when
   [{:keys [column expression]} data]
-  (when-let [field (->practitioner column data)]
-    (->practitioner expression data)))
+  (when-let [field (rule-expand column data)]
+    (rule-expand expression data)))
 
-(defmethod ->practitioner :map
+(defmethod rule-expand :map
   [{:keys [column map]} data]
-  (when-let [field (->practitioner column data)]
+  (when-let [field (rule-expand column data)]
     (get map field)))
 
 (def ^:private
@@ -172,10 +175,12 @@
 ;; Models
 ;;
 
+(def ->practitioner (partial rule-expand rule-practitioner))
+
 (defn read-practitioners
   "Returns a lazy sequence of `Practitioner` maps.
   The `src` is either a file path or an input stream."
   [src]
   (for [data (read-csv src)
         :when (-> data :entity_type_code (= "1"))]
-    (->practitioner rule-practitioner data)))
+    (->practitioner data)))
