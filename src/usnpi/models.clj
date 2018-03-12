@@ -220,6 +220,9 @@
   {:arglists '([data])}
   :entity_type_code)
 
+(defmethod ->model :default
+  [data] nil)
+
 (defmethod ->model "1"
   [data]
   (rule-expand rule-practitioner data))
@@ -232,7 +235,9 @@
   "Returns a lazy sequence of FHIR models.
   The `src` is either a file path or an input stream."
   [src]
-  (map ->model (read-csv src)))
+  (->> (read-csv src)
+       (map ->model)
+       (remove nil?)))
 
 (defn- model?
   [resourceType model]
@@ -241,13 +246,3 @@
 (def practitioner? (partial model? "Practitioner"))
 
 (def organization? (partial model? "Organization"))
-
-(defn read-practitioners
-  "Returns a lazy sequence of `Practitioner` only models."
-  [src]
-  (filter practitioner? (read-models src)))
-
-(defn read-organizations
-  "Returns a lazy sequence of `Organization` only models."
-  [src]
-  (filter organization? (read-models src)))

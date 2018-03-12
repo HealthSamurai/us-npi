@@ -208,17 +208,18 @@
   nil)
 
 (defn- process-dissemination
+  "Reads models from a stream and updates them in the DB."
   [stream]
   (let [model-seq (models/read-models stream)]
-    (doseq [models (by-chunks db-chunk model-seq)
-            practitioners (filter models/practitioner? models)
+    (doseq [models (by-chunks db-chunk model-seq)]
+      (let [practitioners (filter models/practitioner? models)
             organizations (filter models/organization? models)]
 
-      (when-let [rows (not-empty (map model->row practitioners))]
-        (db/execute! (db/query-insert-practitioners rows)))
+        (when-let [rows (not-empty (map model->row practitioners))]
+          (db/execute! (db/query-insert-practitioners rows)))
 
-      (when-let [rows (not-empty (map model->row organizations))]
-        (db/execute! (db/query-insert-organizations rows))))))
+        (when-let [rows (not-empty (map model->row organizations))]
+          (db/execute! (db/query-insert-organizations rows)))))))
 
 (defn task-dissemination
   "A regular task that parses the download page, fetches a CSV file
