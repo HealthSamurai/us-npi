@@ -62,6 +62,24 @@
     (get map field)))
 
 (def ^:private
+  rule-organization
+  {:id :npi
+   :resourceType "Organization"
+
+   :text {:status "generated"
+          :div "todo"}
+
+   :name "test"
+
+   :telecom [{} {} {}]
+
+   :address [{} {} {}]
+
+   :contact []
+
+})
+
+(def ^:private
   rule-practitioner
   {:id :npi
    :resourceType "Practitioner"
@@ -175,12 +193,39 @@
 ;; Models
 ;;
 
-(def ->practitioner (partial rule-expand rule-practitioner))
+(defmulti ->model
+  "Turns a CSV map into a FHIR entity."
+  {:arglists '([data])}
+  :entity_type_code)
 
-(defn read-practitioners
-  "Returns a lazy sequence of `Practitioner` maps.
+(defmethod ->model "1"
+  [data]
+  (rule-expand rule-practitioner data))
+
+(defmethod ->model "2"
+  [data]
+  (rule-expand rule-organization data))
+
+(defn read-models
+  "Returns a lazy sequence of FHIR models.
   The `src` is either a file path or an input stream."
   [src]
-  (for [data (read-csv src)
-        :when (-> data :entity_type_code (= "1"))]
-    (->practitioner data)))
+  (map ->model (read-csv src)))
+
+(defn- model?
+  [resourceType model]
+  (and (map? model) (= (:resourceType model) resourceType)))
+
+(def practitioner? (partial model? "Practitioner"))
+
+(def organization? (partial model? "Organization"))
+
+(defn read-practitioners
+  "Returns a lazy sequence of `Practitioner` only models."
+  [src]
+  (filter practitioner? (read-models src)))
+
+(defn read-organizations
+  "Returns a lazy sequence of `Organization` only models."
+  [src]
+  (filter organization? (read-models src)))
