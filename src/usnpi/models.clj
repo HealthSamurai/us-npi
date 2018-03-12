@@ -61,23 +61,74 @@
   (when-let [field (rule-expand column data)]
     (get map field)))
 
-(def ^:private
+(defmethod rule-expand :join
+  [{:keys [values separator]} data]
+  (let [coll (rule-expand values data)]
+    (str/join separator coll)))
+
+(def ^{:private true
+       :doc "Common address part."}
+  rule-address
+  [{:user "work"
+    :city :provider_business_practice_location_address_city_name
+    :country :provider_business_practice_location_address_country_code_if_out
+    :line [:provider_first_line_business_practice_location_address
+           :provider_second_line_business_practice_location_address]
+    :state :provider_business_practice_location_address_state_name
+    :postalCode :provider_business_practice_location_address_postal_code}])
+
+(def ^{:private true
+       :doc "Common telecom part."}
+  rule-telecom
+  [{:$type :when
+    :column :provider_business_practice_location_address_telephone_number
+    :expression {:system "phone"
+                 :use "work"
+                 :value :provider_business_practice_location_address_telephone_number}}
+
+   {:$type :when
+    :column :provider_business_mailing_address_telephone_number
+    :expression {:system "phone"
+                 :use "mailing"
+                 :value :provider_business_mailing_address_telephone_number}}
+
+   {:$type :when
+    :column  :provider_business_practice_location_address_fax_number
+    :expression {:system "fax"
+                 :use "work"
+                 :value :provider_business_practice_location_address_fax_number}}
+
+   {:$type :when
+    :column :provider_business_mailing_address_fax_number
+    :expression {:system "fax"
+                 :use "mailing"
+                 :value :provider_business_mailing_address_fax_number}}])
+
+(def ^{:private true
+       :doc "https://www.hl7.org/fhir/organization-examples.html"}
   rule-organization
   {:id :npi
    :resourceType "Organization"
+   :name :provider_organization_name_legal_business_name
+   :telecom rule-telecom
+   :address rule-address
 
-   :text {:status "generated"
-          :div "todo"}
+   :contact
+   [{:purpose
+     {:coding [{:system "http://hl7.org/fhir/contactentity-type"
+                :code :authorized_official_title_or_position}]}}
 
-   :name "test"
+    :name {:text {:$type :join
+                  :separator " "
+                  :values [:authorized_official_first_name
+                           :authorized_official_middle_name
+                           :authorized_official_last_name]}}
 
-   :telecom [{} {} {}]
-
-   :address [{} {} {}]
-
-   :contact []
-
-})
+    :telecom [{:$type :when
+               :column :provider_business_practice_location_address_telephone_number
+               :expression {:system "phone"
+                            :use "work"
+                            :value :provider_business_practice_location_address_telephone_number}}]]})
 
 (def ^:private
   rule-practitioner
@@ -102,62 +153,33 @@
             :column :provider_gender_code,
             :map {"F" "female" "M" "male"}}
 
-   :address [{:user "work"
-              :city :provider_business_practice_location_address_city_name
-              :country :provider_business_practice_location_address_country_code_if_out
-              :line [:provider_first_line_business_practice_location_address
-                     :provider_second_line_business_practice_location_address]
-              :state :provider_business_practice_location_address_state_name
-              :postalCode :provider_business_practice_location_address_postal_code}]
+   :address rule-address
+   :telecom rule-telecom
 
-   :telecom [{:$type :when
-              :column :provider_business_practice_location_address_telephone_number
-              :expression {:system "phone"
-                           :user "work"
-                           :value :provider_business_practice_location_address_telephone_number}}
+   :identifier
+   (vec (for [i (range 1 50)]
+          {:value  (postfix :other_provider_identifier i)
+           :state  (postfix :other_provider_identifier_state i)
+           :code   {:$type :map
+                    :column (postfix :other_provider_identifier_type_code i)
+                    :map {"01" "OTHER"
+                          "02" "MEDICARE UPIN"
+                          "04" "MEDICARE ID-TYPE UNSPECIFIED"
+                          "05" "MEDICAID"
+                          "06" "MEDICARE OSCAR/CERTIFICATION"
+                          "07" "MEDICARE NSC"
+                          "08" "MEDICARE PIN"}}
+           :issuer (postfix :other_provider_identifier_issuer i)}))
 
-             {:$type :when
-              :column :provider_business_mailing_address_telephone_number
-              :expression {:system "phone"
-                           :user "mailing"
-                           :value :provider_business_mailing_address_telephone_number}}
-
-             {:$type :when
-              :column  :provider_business_practice_location_address_fax_number
-              :expression {:system "fax"
-                           :user "work"
-                           :value :provider_business_practice_location_address_fax_number}}
-
-             {:$type :when
-              :column :provider_business_mailing_address_fax_number
-              :expression {:system "fax"
-                           :user "mailing"
-                           :value :provider_business_mailing_address_fax_number}}]
-
-   :identifier (vec
-                (for [i (range 1 50)]
-                  {:value  (postfix :other_provider_identifier i)
-                   :state  (postfix :other_provider_identifier_state i)
-                   :code   {:$type :map
-                            :column (postfix :other_provider_identifier_type_code i)
-                            :map {"01" "OTHER"
-                                  "02" "MEDICARE UPIN"
-                                  "04" "MEDICARE ID-TYPE UNSPECIFIED"
-                                  "05" "MEDICAID"
-                                  "06" "MEDICARE OSCAR/CERTIFICATION"
-                                  "07" "MEDICARE NSC"
-                                  "08" "MEDICARE PIN"}}
-                   :issuer (postfix :other_provider_identifier_issuer i)}))
-
-   :qualification (vec
-                   (for [i (range 1 10)]
-                     {:$type :when
-                      :column (postfix :provider_license_number i)
-                      :expression {:identifier {:system "http://fhir.us/us-license"
-                                                :value (postfix :provider_license_number i)}
-                                   :state      (postfix :provider_license_number_state_code i)
-                                   :code       {:coding [{:system "http://nucc.org/provider-taxonomy"
-                                                          :code (postfix :healthcare_provider_taxonomy_code i)}]}}}))})
+   :qualification
+   (vec (for [i (range 1 10)]
+          {:$type :when
+           :column (postfix :provider_license_number i)
+           :expression {:identifier {:system "http://fhir.us/us-license"
+                                     :value (postfix :provider_license_number i)}
+                        :state      (postfix :provider_license_number_state_code i)
+                        :code       {:coding [{:system "http://nucc.org/provider-taxonomy"
+                                               :code (postfix :healthcare_provider_taxonomy_code i)}]}}}))})
 
 ;;
 ;; CSV reading
