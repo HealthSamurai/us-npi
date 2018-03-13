@@ -74,7 +74,7 @@
   (let [cond (cond-> []
                nm (into (->> (str/split nm #"\s+")
                           (remove str/blank?)
-                          (mapv #(format "%s ilike '%%:%s%%'" search-expression %))))
+                          (mapv #(format "%s ilike '%%%s%%'" search-expression %))))
                st (conj (format "%s ilike '%%s:%s %%'" search-expression st)))]
     (format "
 select jsonb_build_object('entry', jsonb_agg(row_to_json(x.*)))::text as bundle
