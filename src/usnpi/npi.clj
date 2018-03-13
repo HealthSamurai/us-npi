@@ -149,7 +149,7 @@ from (select %s as resource from practitioner where not deleted %s limit %s) x"
   "Returns multiple organization entities by a query term."
   [request]
   (let [words (some-> request :params :q parse-words)
-        limit (-> request :params :limit (or 100))
+        limit (-> request :params :_count (or 100))
 
         get-raw #(db/raw (format "\n%s ilike '%%%s%%'" search-expression-org %))
 
