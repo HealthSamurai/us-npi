@@ -65,6 +65,7 @@
   [request]
   (db/with-tx
     (db/execute! "truncate practitioner")
+    (db/execute! "truncate organizations")
     (db/execute! "update tasks set next_run_at = now() where handler = 'usnpi.update/task-full-dissemination'")
     (db/execute! "truncate npi_updates"))
   (when-not (beat/status)
