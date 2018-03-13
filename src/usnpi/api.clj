@@ -54,7 +54,7 @@
   [request]
   (db/with-tx
     (db/execute! "truncate npi_updates")
-    (db/execute! "update tasks set next_run_at = (current_timestamp at time zone 'UTC') + random() * interval '600 seconds'" ))
+    (db/execute! "update tasks set next_run_at = (current_timestamp at time zone 'UTC') + random() * interval '300 seconds'" ))
   (when-not (beat/status)
     (beat/start))
   (json-resp
