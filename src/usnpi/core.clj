@@ -29,7 +29,7 @@
                    [:npi] {:GET #'npi/get-practitioner}}
 
    "organization" {:GET #'npi/get-organizations
-                   "$batch" {:GET #'npi/get-organizations-by-ids}
+                   "batch" {:GET #'npi/get-organizations-by-ids}
                    [:npi] {:GET #'npi/get-organization}}
 
    "system" {"env" {:GET #'api/api-env}
