@@ -28,7 +28,8 @@
                    "$batch" {:GET #'npi/get-practitioners-by-ids}
                    [:npi] {:GET #'npi/get-practitioner}}
 
-   "organization" {"$batch" {:GET #'npi/get-organizations-by-ids}
+   "organization" {:GET #'npi/get-organizations
+                   "$batch" {:GET #'npi/get-organizations-by-ids}
                    [:npi] {:GET #'npi/get-organization}}
 
    "system" {"env" {:GET #'api/api-env}

@@ -20,10 +20,16 @@
   *db* {:dbtype "postgresql"
         :connection-uri db-url})
 
+;;
+;; Helpers
+;;
+
 (defn to-sql
   "Local wrapper to turn a map into a SQL string."
   [sqlmap]
   (sql/format sqlmap))
+
+(def raw sql/raw)
 
 ;;
 ;; DB API

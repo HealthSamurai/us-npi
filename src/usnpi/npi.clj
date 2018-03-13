@@ -9,10 +9,35 @@
 
 (defn- parse-ids
   [ids-str]
-  (not-empty (re-seq #"\w+" ids-str)))
+  (not-empty (re-seq #"\d+" ids-str)))
 
-(def search-expression
+(defn- parse-words
+  [term]
+  (not-empty
+   (as-> term $
+     (str/split $ #"\s+")
+     (remove empty? $))))
+
+(defn- to-str
+  [x]
+  (if (keyword? x) (name x) (str x)))
+
+(defn- gen-search-expression
+  [fields]
   (->>
+   fields
+   (map (fn [[pr & pth]]
+          (format "'%s:' || coalesce((resource#>>'{%s}'), '')"
+                  (to-str pr) (str/join "," (mapv to-str pth)))))
+   (str/join " || ' ' || \n")))
+
+;;
+;; Practitioner
+;;
+
+(def ^:private
+  search-expression
+  (gen-search-expression
    [[:g :name 0 :given 0]
     [:g :name 0 :given 1]
     [:m :name 0 :middle 0]
@@ -28,18 +53,7 @@
     [:f :name 1 :family]
 
     [:s :address 0 :state]
-    [:c :address 0 :city]]
-
-   (map (fn [[pr & pth]]
-          (str "'" (name pr) ":' || coalesce((resource#>>'{" (str/join "," (mapv (fn [x] (if (keyword? x) (name x) (str x))) pth)) "}'), '')")))
-   (str/join " || ' ' || \n")))
-
-(defn debug-expr []
-  (db/query [(format "select %s from practitioner limit 10" search-expression)]))
-
-;;
-;; Practitioner
-;;
+    [:c :address 0 :city]]))
 
 (def trgrm_idx
   (format "CREATE INDEX IF NOT EXISTS pract_trgm_idx ON practitioner USING GIST ((\n%s\n) gist_trgm_ops);"
@@ -96,6 +110,13 @@ from (select %s as resource from practitioner where not deleted %s limit %s) x"
 ;; Organizations
 ;;
 
+(def ^:private
+  search-expression-org
+  (gen-search-expression
+   [[:n :name]
+    [:s :address 0 :state]
+    [:c :address 0 :city]]))
+
 (defn get-organization
   "Returns a single organization entity by its id."
   [request]
@@ -107,20 +128,10 @@ from (select %s as resource from practitioner where not deleted %s limit %s) x"
       {:status 200 :body (:resource row)}
       {:status 404 :body (format "Organization with id = %s not found." npi)})))
 
-(defn get-organizations
-  "Returns multiple organization entities filtered by name, etc."
-  [request]
-  (let [q {:select [#sql/raw "resource::text"]
-           :from [:organizations]
-           :where [:and
-                   [:not :deleted]
-                   "sdfsdf ilike "
-
-                   ]}
-
-
-        ])
-)
+(defn- as-bundle
+  "Composes a Bundle JSON response."
+  [models]
+  (format "{\"entry\": [%s]}" (str/join ",\n" (map :resource models))))
 
 (defn get-organizations-by-ids
   "Returns multiple organization entities by their ids."
@@ -131,36 +142,28 @@ from (select %s as resource from practitioner where not deleted %s limit %s) x"
              :where [:and [:not :deleted] [:in :id ids]]}
           orgs (db/query (db/to-sql q))]
       {:status 200
-       :body (str/join "\n" (map :resource orgs))})
+       :body (as-bundle orgs)})
     {:status 400
      :body (format "Parameter ids is malformed.")}))
 
+(defn get-organizations
+  "Returns multiple organization entities by a query term."
+  [request]
+  (let [words (some-> request :params :q parse-words)
+        limit (-> request :params :limit (or 100))
 
+        get-raw #(db/raw (format "\n%s ilike '%%%s%%'" search-expression-org %))
 
-(comment
+        q {:select [#sql/raw "resource::text"]
+           :from [:organizations]
+           :where [:and [:not :deleted]]
+           :limit limit}
 
+        q (if (empty? words)
+            q
+            (update q :where concat (map get-raw words)))
 
+        orgs (db/query (db/to-sql q))]
 
-
-  (spit "/tmp/test.sql"
-        (get-practitioners-query {:name "dave hol" :state "NY"})
-        )
-
-
-  ()
-
-  (db/execute! "create extension pg_trgm")
-
-
-
-  (db/execute!
-   "
-CREATE UNIQUE INDEX CONCURRENTLY practitioner_idx ON practitioner (id);
-ALTER TABLE practitioner ADD CONSTRAINT practitioner_pkey PRIMARY KEY USING INDEX practitioner_idx;
-"
-   {:transaction? false}
-
-   )
-
-
-  )
+    {:status 200
+     :body (as-bundle orgs)}))
