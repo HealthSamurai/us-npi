@@ -3,12 +3,41 @@
             [clojure.string :as str])
   (:import [java.net URLEncoder]))
 
-(defn url-encode [x] (when x (URLEncoder/encode x)))
+(defn- url-encode [x] (when x (URLEncoder/encode x)))
 
-(defn sanitize [x] (str/replace x #"[^a-zA-Z0-9]" ""))
+(defn- sanitize [x] (str/replace x #"[^a-zA-Z0-9]" ""))
 
-(def search-expression
+(defn- parse-ids
+  [ids-str]
+  (not-empty (re-seq #"\d+" ids-str)))
+
+(defn- parse-words
+  [term]
+  (not-empty
+   (as-> term $
+     (str/split $ #"\s+")
+     (remove empty? $))))
+
+(defn- to-str
+  [x]
+  (if (keyword? x) (name x) (str x)))
+
+(defn- gen-search-expression
+  [fields]
   (->>
+   fields
+   (map (fn [[pr & pth]]
+          (format "'%s:' || coalesce((resource#>>'{%s}'), '')"
+                  (to-str pr) (str/join "," (mapv to-str pth)))))
+   (str/join " || ' ' || \n")))
+
+;;
+;; Practitioner
+;;
+
+(def ^:private
+  search-expression
+  (gen-search-expression
    [[:g :name 0 :given 0]
     [:g :name 0 :given 1]
     [:m :name 0 :middle 0]
@@ -24,14 +53,7 @@
     [:f :name 1 :family]
 
     [:s :address 0 :state]
-    [:c :address 0 :city]]
-
-   (map (fn [[pr & pth]]
-          (str "'" (name pr) ":' || coalesce((resource#>>'{" (str/join "," (mapv (fn [x] (if (keyword? x) (name x) (str x))) pth)) "}'), '')")))
-   (str/join " || ' ' || \n")))
-
-(defn debug-expr []
-  (db/query [(format "select %s from practitioner limit 10" search-expression)]))
+    [:c :address 0 :city]]))
 
 (def trgrm_idx
   (format "CREATE INDEX IF NOT EXISTS pract_trgm_idx ON practitioner USING GIST ((\n%s\n) gist_trgm_ops);"
@@ -48,18 +70,17 @@
     {:status 200 :body pr}
     {:status 404 :body (str "Practitioner with id = " npi " not found")}))
 
-(defn get-practitioners-query [{nm :name st :state cnt :_count}]
+(defn get-practitioners-query [{q :q cnt :_count}]
   (let [cond (cond-> []
-               nm (into (->> (str/split nm #"\s+")
-                          (remove str/blank?)
-                          (mapv #(format "%s ilike '%%:%s%%'" search-expression %))))
-               st (conj (format "%s ilike '%%s:%s %%'" search-expression st)))]
+               q (into (->> (str/split q #"\s+")
+                            (remove str/blank?)
+                            (mapv #(format "%s ilike '%%%s%%'" search-expression %)))))]
     (format "
 select jsonb_build_object('entry', jsonb_agg(row_to_json(x.*)))::text as bundle
 from (select %s as resource from practitioner where not deleted %s limit %s) x"
             to-resource-expr
             (if (not (empty? cond))
-              (str " AND "(str/join " AND " cond))
+              (str "\nAND\n" (str/join "\nAND\n" cond))
               "")
             (or cnt "100"))))
 
@@ -84,31 +105,64 @@ from (select %s as resource from practitioner where not deleted %s limit %s) x"
     {:status 422
      :body {:message "ids parameter requried"}}))
 
+;;
+;; Organizations
+;;
 
-(comment
+(def ^:private
+  search-expression-org
+  (gen-search-expression
+   [[:n :name]
+    [:s :address 0 :state]
+    [:c :address 0 :city]]))
 
+(defn get-organization
+  "Returns a single organization entity by its id."
+  [request]
+  (let [npi (-> request :route-params :npi)
+        q {:select [#sql/raw "resource::text"]
+           :from [:organizations]
+           :where [:and [:not :deleted] [:= :id npi]]}]
+    (if-let [row (first (db/query (db/to-sql q)))]
+      {:status 200 :body (:resource row)}
+      {:status 404 :body (format "Organization with id = %s not found." npi)})))
 
+(defn- as-bundle
+  "Composes a Bundle JSON response."
+  [models]
+  (format "{\"entry\": [%s]}" (str/join ",\n" (map :resource models))))
 
+(defn get-organizations-by-ids
+  "Returns multiple organization entities by their ids."
+  [request]
+  (if-let [ids (some->> request :params :ids parse-ids)]
+    (let [q {:select [#sql/raw "resource::text"]
+             :from [:organizations]
+             :where [:and [:not :deleted] [:in :id ids]]}
+          orgs (db/query (db/to-sql q))]
+      {:status 200
+       :body (as-bundle orgs)})
+    {:status 400
+     :body (format "Parameter ids is malformed.")}))
 
-  (spit "/tmp/test.sql"
-        (get-practitioners-query {:name "dave hol" :state "NY"})
-        )
+(defn get-organizations
+  "Returns multiple organization entities by a query term."
+  [request]
+  (let [words (some-> request :params :q parse-words)
+        limit (-> request :params :limit (or 100))
 
+        get-raw #(db/raw (format "\n%s ilike '%%%s%%'" search-expression-org %))
 
-  ()
+        q {:select [#sql/raw "resource::text"]
+           :from [:organizations]
+           :where [:and [:not :deleted]]
+           :limit limit}
 
-  (db/execute! "create extension pg_trgm")
+        q (if (empty? words)
+            q
+            (update q :where concat (map get-raw words)))
 
+        orgs (db/query (db/to-sql q))]
 
-
-  (db/execute!
-   "
-CREATE UNIQUE INDEX CONCURRENTLY practitioner_idx ON practitioner (id);
-ALTER TABLE practitioner ADD CONSTRAINT practitioner_pkey PRIMARY KEY USING INDEX practitioner_idx;
-"
-   {:transaction? false}
-
-   )
-
-
-  )
+    {:status 200
+     :body (as-bundle orgs)}))

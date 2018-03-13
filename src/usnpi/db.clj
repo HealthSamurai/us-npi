@@ -20,10 +20,16 @@
   *db* {:dbtype "postgresql"
         :connection-uri db-url})
 
+;;
+;; Helpers
+;;
+
 (defn to-sql
   "Local wrapper to turn a map into a SQL string."
   [sqlmap]
   (sql/format sqlmap))
+
+(def raw sql/raw)
 
 ;;
 ;; DB API
@@ -73,15 +79,33 @@
 ;; Custom queries
 ;;
 
-(defn query-insert-practitioners
-  [values]
-  (let [query-map {:insert-into :practitioner
-                   :values values}
+(defn- query-insert-models
+  [table rows]
+  (let [query-map {:insert-into table
+                   :values rows}
         extra "ON CONFLICT (id) DO UPDATE SET deleted = EXCLUDED.deleted, resource = EXCLUDED.resource"
         query-vect (sql/format query-map)
         query-main (first query-vect)
         query-full (format "%s %s" query-main extra)]
     (into [query-full] (rest query-vect))))
+
+(def query-insert-practitioners
+  (partial query-insert-models :practitioner))
+
+(def query-insert-organizations
+  (partial query-insert-models :organizations))
+
+(defn- query-delete-models
+  [table npis]
+  (to-sql {:update table
+           :set {:deleted true}
+           :where [:in :id npis]}))
+
+(def query-delete-practitioners
+  (partial query-delete-models :practitioner))
+
+(def query-delete-organizations
+  (partial query-delete-models :organizations))
 
 ;;
 ;; migrations

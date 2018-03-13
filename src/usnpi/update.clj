@@ -83,14 +83,11 @@
   (partition n n [] seq))
 
 (defn- mark-npi-deleted
-  "Marks practitioners as deleted by passed NPIs."
+  "Marks models as deleted by passed NPIs."
   [npis-all]
   (doseq [npis (by-chunks db-chunk npis-all)]
-    (db/execute!
-     (db/to-sql
-      {:update :practitioner
-       :set {:deleted true}
-       :where [:in :id npis]}))))
+    (db/execute! (db/query-delete-practitioners npis))
+    (db/execute! (db/query-delete-organizations npis))))
 
 (def ^:private
   re-any-xlsx #"(?i)\.xlsx$")
@@ -103,10 +100,11 @@
 (def ^:private
   re-dissem-full-csv #"(?i)npidata_\d{8}-\d{8}\.csv$")
 
-(defn- pract->db-row
-  [practitioner]
-  {:id (:id practitioner)
-   :resource (json/generate-string practitioner)
+(defn- model->row
+  "Turns a model map into its database representation."
+  [model]
+  {:id (:id model)
+   :resource (json/generate-string model)
    :deleted false})
 
 ;;
@@ -210,13 +208,18 @@
   nil)
 
 (defn- process-dissemination
-  "Bypass transaction to avoid deadlocks."
+  "Reads models from a stream and updates them in the DB."
   [stream]
-  (let [practitioners (models/read-practitioners stream)]
-    (doseq [chunk (by-chunks db-chunk practitioners)]
-      (let [rows (map pract->db-row chunk)]
-        (log/infof "Inserting %s dissemination rows..." db-chunk)
-        (db/execute! (db/query-insert-practitioners rows))))))
+  (let [model-seq (models/read-models stream)]
+    (doseq [models (by-chunks db-chunk model-seq)]
+      (let [practitioners (filter models/practitioner? models)
+            organizations (filter models/organization? models)]
+
+        (when-let [rows (not-empty (map model->row practitioners))]
+          (db/execute! (db/query-insert-practitioners rows)))
+
+        (when-let [rows (not-empty (map model->row organizations))]
+          (db/execute! (db/query-insert-organizations rows)))))))
 
 (defn task-dissemination
   "A regular task that parses the download page, fetches a CSV file
@@ -245,11 +248,12 @@
         (save-dissemination url-zip))))
   nil)
 
-(defn- practitioner-exists?
+(defn- npi-exists?
+  "Checks if there is something loaded in the DB."
   []
   (boolean
    (not-empty
-    (db/query "select id from practitioner limit 1"))))
+    (db/query "select id from practitioner union select id from organizations limit 1"))))
 
 (defn- task-full-dissemination-inner
   "See task-full-dissemination docstring."
@@ -283,8 +287,8 @@
   Checks whether there are any practitioner records in the DB.
   Does nothing when there are."
   []
-  (if (practitioner-exists?)
-    (log/info "Practitioner records were found. Skipping FULL import.")
+  (if (npi-exists?)
+    (log/info "NPI records were found. Skipping FULL import.")
     (do
       (log/info "No practitioner records were found. Start FULL import.")
       (task-full-dissemination-inner))))
