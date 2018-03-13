@@ -3,9 +3,13 @@
             [clojure.string :as str])
   (:import [java.net URLEncoder]))
 
-(defn url-encode [x] (when x (URLEncoder/encode x)))
+(defn- url-encode [x] (when x (URLEncoder/encode x)))
 
-(defn sanitize [x] (str/replace x #"[^a-zA-Z0-9]" ""))
+(defn- sanitize [x] (str/replace x #"[^a-zA-Z0-9]" ""))
+
+(defn- parse-ids
+  [ids-str]
+  (not-empty (re-seq #"\w+" ids-str)))
 
 (def search-expression
   (->>
@@ -33,6 +37,10 @@
 (defn debug-expr []
   (db/query [(format "select %s from practitioner limit 10" search-expression)]))
 
+;;
+;; Practitioner
+;;
+
 (def trgrm_idx
   (format "CREATE INDEX IF NOT EXISTS pract_trgm_idx ON practitioner USING GIST ((\n%s\n) gist_trgm_ops);"
           search-expression))
@@ -48,34 +56,6 @@
     {:status 200 :body pr}
     {:status 404 :body (str "Practitioner with id = " npi " not found")}))
 
-(defn get-organization
-  "Returns a single organization entity by its id."
-  [request]
-  (let [npi (-> request :route-params :npi)
-        q {:select [#sql/raw "resource::text"]
-           :from [:organizations]
-           :where [:and [:not :deleted] [:= :id npi]]}]
-    (if-let [row (first (db/query (db/to-sql q)))]
-      {:status 200 :body (:resource row)}
-      {:status 404 :body (format "Organization with id = %s not found." npi)})))
-
-(defn- parse-ids
-  [ids-str]
-  (not-empty (re-seq #"\w+" ids-str)))
-
-(defn get-organizations-by-ids
-  "Returns multiple organization entities by their ids."
-  [request]
-  (if-let [ids (some->> request :params :ids parse-ids)]
-    (let [q {:select [#sql/raw "resource::text"]
-             :from [:organizations]
-             :where [:and [:not :deleted] [:in :id ids]]}
-          orgs (db/query (db/to-sql q))]
-      {:status 200
-       :body (str/join "\n" (map :resource orgs))})
-    {:status 400
-     :body (format "Parameter ids is malformed.")}))
-
 (defn get-practitioners-query [{nm :name st :state cnt :_count}]
   (let [cond (cond-> []
                nm (into (->> (str/split nm #"\s+")
@@ -87,7 +67,7 @@ select jsonb_build_object('entry', jsonb_agg(row_to_json(x.*)))::text as bundle
 from (select %s as resource from practitioner where not deleted %s limit %s) x"
             to-resource-expr
             (if (not (empty? cond))
-              (str " AND "(str/join " AND " cond))
+              (str "\nAND\n" (str/join "\nAND\n" cond))
               "")
             (or cnt "100"))))
 
@@ -111,6 +91,50 @@ from (select %s as resource from practitioner where not deleted %s limit %s) x"
        :body (->> (time (mapv :resource (db/query sql))))})
     {:status 422
      :body {:message "ids parameter requried"}}))
+
+;;
+;; Organizations
+;;
+
+(defn get-organization
+  "Returns a single organization entity by its id."
+  [request]
+  (let [npi (-> request :route-params :npi)
+        q {:select [#sql/raw "resource::text"]
+           :from [:organizations]
+           :where [:and [:not :deleted] [:= :id npi]]}]
+    (if-let [row (first (db/query (db/to-sql q)))]
+      {:status 200 :body (:resource row)}
+      {:status 404 :body (format "Organization with id = %s not found." npi)})))
+
+(defn get-organizations
+  "Returns multiple organization entities filtered by name, etc."
+  [request]
+  (let [q {:select [#sql/raw "resource::text"]
+           :from [:organizations]
+           :where [:and
+                   [:not :deleted]
+                   "sdfsdf ilike "
+
+                   ]}
+
+
+        ])
+)
+
+(defn get-organizations-by-ids
+  "Returns multiple organization entities by their ids."
+  [request]
+  (if-let [ids (some->> request :params :ids parse-ids)]
+    (let [q {:select [#sql/raw "resource::text"]
+             :from [:organizations]
+             :where [:and [:not :deleted] [:in :id ids]]}
+          orgs (db/query (db/to-sql q))]
+      {:status 200
+       :body (str/join "\n" (map :resource orgs))})
+    {:status 400
+     :body (format "Parameter ids is malformed.")}))
+
 
 
 (comment
