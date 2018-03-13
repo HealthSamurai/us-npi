@@ -48,6 +48,34 @@
     {:status 200 :body pr}
     {:status 404 :body (str "Practitioner with id = " npi " not found")}))
 
+(defn get-organization
+  "Returns a single organization entity by its id."
+  [request]
+  (let [npi (-> request :route-params :npi)
+        q {:select [#sql/raw "resource::text"]
+           :from [:organizations]
+           :where [:and [:not :deleted] [:= :id npi]]}]
+    (if-let [row (first (db/query (db/to-sql q)))]
+      {:status 200 :body (:resource row)}
+      {:status 404 :body (format "Organization with id = %s not found." npi)})))
+
+(defn- parse-ids
+  [ids-str]
+  (not-empty (re-seq #"\w+" ids-str)))
+
+(defn get-organizations-by-ids
+  "Returns multiple organization entities by their ids."
+  [request]
+  (if-let [ids (some->> request :params :ids parse-ids)]
+    (let [q {:select [#sql/raw "resource::text"]
+             :from [:organizations]
+             :where [:and [:not :deleted] [:in :id ids]]}
+          orgs (db/query (db/to-sql q))]
+      {:status 200
+       :body (str/join "\n" (map :resource orgs))})
+    {:status 400
+     :body (format "Parameter ids is malformed.")}))
+
 (defn get-practitioners-query [{nm :name st :state cnt :_count}]
   (let [cond (cond-> []
                nm (into (->> (str/split nm #"\s+")
