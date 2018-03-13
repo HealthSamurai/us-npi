@@ -70,12 +70,11 @@
     {:status 200 :body pr}
     {:status 404 :body (str "Practitioner with id = " npi " not found")}))
 
-(defn get-practitioners-query [{nm :name st :state cnt :_count}]
+(defn get-practitioners-query [{q :q cnt :_count}]
   (let [cond (cond-> []
-               nm (into (->> (str/split nm #"\s+")
-                          (remove str/blank?)
-                          (mapv #(format "%s ilike '%%%s%%'" search-expression %))))
-               st (conj (format "%s ilike '%%s:%s %%'" search-expression st)))]
+               q (into (->> (str/split q #"\s+")
+                            (remove str/blank?)
+                            (mapv #(format "%s ilike '%%%s%%'" search-expression %)))))]
     (format "
 select jsonb_build_object('entry', jsonb_agg(row_to_json(x.*)))::text as bundle
 from (select %s as resource from practitioner where not deleted %s limit %s) x"
