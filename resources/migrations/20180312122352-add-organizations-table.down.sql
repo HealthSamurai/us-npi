@@ -1,5 +1,5 @@
 begin;
 
-drop table organizations;
+drop table if exists organizations;
 
 commit;
