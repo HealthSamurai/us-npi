@@ -44,6 +44,10 @@
   curl https://npi.health-samurai.io/practitioner?q=david&_count=5
   ```
 
+  If a query term carries several words inside it, say `foo bar baz`, the result
+  logic will concatenate them with `AND`s as the following pseudo-code does:
+  `search(foo) AND search(bar) AND search(baz)`
+
 ### Organizations
 
 - `GET /organization/<ID>`
