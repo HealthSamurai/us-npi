@@ -1,10 +1,17 @@
 (ns usnpi.core-test
   (:require [clojure.test :refer :all]
+            [clojure.java.io :as io]
+            [cheshire.core :as json]
+            [ring.mock.request :as mock]
             [usnpi.db :as db]
-            [usnpi.core :as usnpi]
             [usnpi.beat :as beat]
+            [usnpi.core :as usnpi]
             [usnpi.tasks :as tasks]
-            [ring.mock.request :as mock]))
+            [usnpi.models :as models]))
+
+(defn- read-json
+  [res]
+  (json/parse-string (:body res) true))
 
 (deftest test-root-page
   (testing "The root page returns the request map"
@@ -52,3 +59,38 @@
     (db/execute! "truncate tasks"))
 
   (beat/stop))
+
+(deftest test-model-api
+
+  (db/execute! "truncate practitioner")
+  (db/execute! "truncate organizations")
+
+  (let [models (-> "npi_sample.csv" io/resource io/input-stream models/read-models)
+        practs (filter models/practitioner? models)
+        orgs (filter models/organization? models)]
+
+    (db/insert-multi! :practitioner (map db/model->row practs))
+    (db/insert-multi! :organizations (map db/model->row orgs)))
+
+  (testing "Practitioner API"
+    (let [npi-pract "1932601184"
+          url-pract-ok (format "/practitioner/%s" npi-pract)
+          url-pract-err (format "/practitioner/%s" "1010101010101")]
+
+      (testing "Getting a single practitioner"
+        (let [res (usnpi/index (mock/request :get url-pract-ok))]
+          (is (= (:status res) 200))
+          (is (= (-> res read-json :name first :given first)
+                 "YU"))))
+
+      (testing "Getting a missing practitioner"
+        (let [res (usnpi/index (mock/request :get url-pract-err))]
+          (is (= (:status res) 404))))
+
+      (testing "Getting a deleted practitioner"
+        (db/execute! ["update practitioner set deleted = true where id = ?" npi-pract])
+        (let [res (usnpi/index (mock/request :get url-pract-ok))]
+          (is (= (:status res) 404))))))
+
+
+  )

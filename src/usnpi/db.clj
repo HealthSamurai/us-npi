@@ -2,6 +2,7 @@
   (:require [clojure.java.jdbc :as jdbc]
             [clj-time.jdbc] ;; extends JDBC protocols
             [honeysql.core :as sql]
+            [cheshire.core :as json]
             [clojure.tools.logging :as log]
             [migratus.core :as migratus]
             [usnpi.env :refer [env]]))
@@ -30,6 +31,13 @@
   (sql/format sqlmap))
 
 (def raw sql/raw)
+
+(defn model->row
+  "Turns a model map into its database representation."
+  [model]
+  {:id (:id model)
+   :resource (json/generate-string model)
+   :deleted false})
 
 ;;
 ;; DB API
