@@ -8,6 +8,21 @@
 
 [US NPI][npi] registry in [FHIR][fhir].
 
+# Table of Contents
+
+<!-- toc -->
+
+- [REST endpoints](#rest-endpoints)
+  * [Practitioner](#practitioner)
+  * [Organizations](#organizations)
+  * [System status](#system-status)
+- [Install](#install)
+- [Local development](#local-development)
+- [TODO](#todo)
+- [License](#license)
+
+<!-- tocstop -->
+
 ## REST endpoints
 
 ### Practitioner

@@ -37,3 +37,10 @@ docker-bash:
 
 git-commit:
 	@echo $(shell git rev-parse --short HEAD)
+
+
+toc-install:
+	npm install --save markdown-toc
+
+toc-build:
+	node_modules/.bin/markdown-toc -i README.md

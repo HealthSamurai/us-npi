@@ -16,3 +16,5 @@ env_dev
 env_test
 deploy/deploy.yaml
 usnpi.log
+node_modules/
+package-lock.json
