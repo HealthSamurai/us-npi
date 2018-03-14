@@ -7,6 +7,9 @@ all: uberjar-build uberjar-run
 repl:
 	lein repl
 
+repl-test:
+	lein with-profile +test repl
+
 uberjar-build:
 	lein uberjar
 
