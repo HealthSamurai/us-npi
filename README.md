@@ -48,6 +48,17 @@
   logic will concatenate them with `AND`s as the following pseudo-code does:
   `search(foo) AND search(bar) AND search(baz)`
 
+  A query term might have a prefix with colon to guarantee more accurate
+  results. For example:
+
+  - `g:David` searches by a given name;
+  - `m:Charles` by a middle name;
+  - `p:MD` by a prefix;
+  - `z:JR` by a suffix;
+  - `f:Thomson` by a family name;
+  - `s:TX` by a USA state;
+  - `c:Rogersville` by a city name.
+
 ### Organizations
 
 - `GET /organization/<ID>`
@@ -79,6 +90,16 @@
   ```bash
   curl https://npi.health-samurai.io/organization?q=WALMART
   ```
+
+  The system considers multiple words in a query term like `/practitioner?q=...`
+  does.
+
+  A query term might have a prefix with colon to guarantee more accurate
+  results. For example:
+
+  - `n:Walmart` searches by a name;
+  - `s:TX` by a USA state;
+  - `c:Rogersville` by a city name.
 
 ### System status
 
