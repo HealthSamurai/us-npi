@@ -39,6 +39,6 @@
   :profiles {:uberjar {:aot :all :omit-source true}
 
              :test {:dependencies [[ring/ring-mock "0.3.2"]]
-                    :resource-paths ["resources_test"]}}
+                    :resource-paths ["profiles/test/resources"]}}
 
   :uberjar-name "usnpi.jar")
