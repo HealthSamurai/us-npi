@@ -1,6 +1,7 @@
 (ns usnpi.beat-test
   (:require [clojure.test :refer :all]
             [usnpi.db :as db]
+            [usnpi.error :refer [error!]]
             [usnpi.beat :as beat]
             [usnpi.tasks :as tasks]
             [usnpi.time :as time]))
@@ -9,7 +10,7 @@
   (/ 2 1))
 
 (defn task-test-err []
-  (/ 2 0))
+  (error! "Failure example"))
 
 (deftest test-beat-start-stop
   (when (beat/status)
@@ -42,7 +43,7 @@
     (-> task1 :success is)
 
     (-> task2 :success not is)
-    (-> task2 :message (= "java.lang.ArithmeticException: Divide by zero") is)
+    (-> task2 :message (= "java.lang.Exception: Failure example") is)
 
     (is (= (compare (:next_run_at task1) (time/now)) 1))
     (is (= (compare (:next_run_at task2) (time/now)) 1))

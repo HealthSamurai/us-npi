@@ -8,8 +8,15 @@
     </encoder>
   </appender>
 
+  <appender name="NOP" class="ch.qos.logback.core.helpers.NOPAppender">
+  </appender>
+
   <logger name="usnpi" level="DEBUG" additivity="false">
     <appender-ref ref="STDOUT"/>
+  </logger>
+
+  <logger name="usnpi.tasks" level="ERROR" additivity="false">
+    <appender-ref ref="NOP"/>
   </logger>
 
 </configuration>
