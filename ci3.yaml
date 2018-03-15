@@ -22,7 +22,8 @@ pipeline:
 # Tests
 - type: env
   PG_IMG: usnpi_pg_test
-  DB_HOST: $PG_IMG
+  DB_HOST:
+    command: $PG_IMG
   DB_PORT: 54321
   DB_USER: postgres
   DB_PASSWORD: postgres
