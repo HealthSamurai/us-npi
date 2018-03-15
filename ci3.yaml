@@ -33,7 +33,7 @@ pipeline:
   DB_DATABASE: postgres
 
 - type: bash
-  command: docker run --name $PG_IMG -p 0.0.0.0:$DB_PORT:5432 -e POSTGRES_PASSWORD=$DB_PASSWORD -e POSTGRES_USER=$DB_USER -d postgres:10
+  command: docker run --name $PG_IMG -e POSTGRES_PASSWORD=$DB_PASSWORD -e POSTGRES_USER=$DB_USER -d postgres:10
 
 - type: env
   DB_HOST:
