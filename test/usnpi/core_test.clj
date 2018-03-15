@@ -8,6 +8,7 @@
             [usnpi.beat :as beat]
             [usnpi.core :as usnpi]
             [usnpi.tasks :as tasks]
+            [usnpi.time :as time]
             [usnpi.models :as models]))
 
 (defn- read-json
@@ -37,7 +38,7 @@
 (defn task-test-ok []
   (/ 2 1))
 
-(defn task-test-err[]
+(defn task-test-err []
   (/ 2 0))
 
 (deftest test-beat-scheduler
@@ -50,12 +51,16 @@
 
   (Thread/sleep (* 1000 1))
 
-  (let [tasks (db/query "select * from tasks order by id")]
+  (let [tasks (db/query "select * from tasks order by id")
+        [task1 task2] tasks]
 
-    (-> tasks first :success is)
+    (-> task1 :success is)
 
-    (-> tasks second :success not is)
-    (-> tasks second :message (= "java.lang.ArithmeticException: Divide by zero") is)
+    (-> task2 :success not is)
+    (-> task2 :message (= "java.lang.ArithmeticException: Divide by zero") is)
+
+    (is (= (compare (:next_run_at task1) (time/now)) 1))
+    (is (= (compare (:next_run_at task2) (time/now)) 1))
 
     (db/execute! "truncate tasks"))
 
@@ -93,7 +98,7 @@
         (let [res (usnpi/index (mock/request :get url-pract-ok))]
           (is (= (:status res) 404))))))
 
-  (testing "search"
+  (testing "Practitioner search"
     (let [url "/practitioner"]
 
       (testing "Test limit"
@@ -122,7 +127,7 @@
           (is (= (:status res) 200))
           (is (-> res read-json :entry not-empty))))))
 
-  (testing "Batch"
+  (testing "Practitioner batch"
     (let [url "/practitioner/$batch"
           id1 "1669586954"
           id2 "1760859052"
@@ -134,13 +139,59 @@
       (testing "Ignores deleted and missing"
         (let [res (usnpi/index (mock/request :get url {:ids ids}))]
           (is (= (:status res) 200))
-          (is (= (-> res read-json :entry count) 1)))
+          (is (= (-> res read-json :entry count) 1))))))
 
-)
-)
+  (testing "Single organization"
+    (let [id "1932315942"
+          url-ok (format "/organization/%s" id)
+          url-err "/organization/dunno"]
 
+      (testing "OK"
+        (let [res (usnpi/index (mock/request :get url-ok))]
+          (is (= (:status res) 200))
+          (is (= (-> res read-json :address first :city) "SAINT LOUIS"))))
 
-    )
+      (testing "Missing"
+        (let [res (usnpi/index (mock/request :get url-err))]
+          (is (= (:status res) 404))))
 
+      (testing "Deleted"
+        (db/update! :organizations {:deleted true} ["id = ?" id])
+        (let [res (usnpi/index (mock/request :get url-ok))]
+          (is (= (:status res) 404))))))
 
-  )
+  (testing "Organization batch"
+    (let [url "/organization/$batch"
+          id1 "1578065728"
+          id2 "1295237444"
+          id3 "lalilulelo"
+          ids (str/join "," [id1 id2 id3])]
+
+      (db/update! :organizations {:deleted true} ["id = ?" id1])
+
+      (testing "OK"
+        (let [res (usnpi/index (mock/request :get url {:ids ids}))]
+          (is (= (:status res) 200))
+          (is (= (-> res read-json :entry count) 1))))
+
+      (testing "no ids"
+        (let [res (usnpi/index (mock/request :get url ))]
+          (is (= (:status res) 400))))))
+
+  (testing "Organization search"
+    (let [url "/organization"]
+
+      (testing "OK"
+        (let [res (usnpi/index (mock/request :get url {:q "physical"}))]
+          (is (= (:status res) 200))
+          (is (= (-> res read-json :entry count) 2))))
+
+      (testing "prefixes"
+        (let [res (usnpi/index (mock/request :get url {:q "n:SCHUS c:JEFF"}))]
+          (is (= (:status res) 200))
+          (is (= (-> res read-json :entry count) 1))))
+
+      (testing "Limit"
+        (let [res (usnpi/index (mock/request :get url {:_count 3}))]
+          (is (= (:status res) 200))
+          (is (= (-> res read-json :entry count) 3)))))))
