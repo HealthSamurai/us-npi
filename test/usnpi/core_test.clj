@@ -1,6 +1,7 @@
 (ns usnpi.core-test
   (:require [clojure.test :refer :all]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [cheshire.core :as json]
             [ring.mock.request :as mock]
             [usnpi.db :as db]
@@ -72,25 +73,74 @@
     (db/insert-multi! :practitioner (map db/model->row practs))
     (db/insert-multi! :organizations (map db/model->row orgs)))
 
-  (testing "Practitioner API"
+  (testing "Single practitioner"
     (let [npi-pract "1932601184"
           url-pract-ok (format "/practitioner/%s" npi-pract)
           url-pract-err (format "/practitioner/%s" "1010101010101")]
 
-      (testing "Getting a single practitioner"
+      (testing "OK"
         (let [res (usnpi/index (mock/request :get url-pract-ok))]
           (is (= (:status res) 200))
           (is (= (-> res read-json :name first :given first)
                  "YU"))))
 
-      (testing "Getting a missing practitioner"
+      (testing "Missing"
         (let [res (usnpi/index (mock/request :get url-pract-err))]
           (is (= (:status res) 404))))
 
-      (testing "Getting a deleted practitioner"
+      (testing "Deleted"
         (db/execute! ["update practitioner set deleted = true where id = ?" npi-pract])
         (let [res (usnpi/index (mock/request :get url-pract-ok))]
           (is (= (:status res) 404))))))
+
+  (testing "search"
+    (let [url "/practitioner"]
+
+      (testing "Test limit"
+        (let [res (usnpi/index (mock/request :get url {:_count 3}))]
+          (is (= (:status res) 200))
+          (is (= (-> res read-json :entry count) 3)))
+
+        (let [res (usnpi/index (mock/request :get url ))]
+          (is (= (:status res) 200))
+          (is (> (-> res read-json :entry count) 3))))
+
+      (testing "Query term"
+        (let [res (usnpi/index (mock/request :get url {:q "david"}))]
+          (is (= (:status res) 200))
+          (is (-> res read-json :entry not-empty)))
+
+        (let [res (usnpi/index (mock/request :get url {:q "g:david"}))]
+          (is (= (:status res) 200))
+          (is (-> res read-json :entry not-empty)))
+
+        (let [res (usnpi/index (mock/request :get url {:q "c:new"}))]
+          (is (= (:status res) 200))
+          (is (-> res read-json :entry not-empty)))
+
+        (let [res (usnpi/index (mock/request :get url {:q "g:David c:Roger"}))]
+          (is (= (:status res) 200))
+          (is (-> res read-json :entry not-empty))))))
+
+  (testing "Batch"
+    (let [url "/practitioner/$batch"
+          id1 "1669586954"
+          id2 "1760859052"
+          id3 "lalilulelo"
+          ids (str/join "," [id1, id2, id3])]
+
+      (db/update! :practitioner {:deleted true} ["id = ?" id1])
+
+      (testing "Ignores deleted and missing"
+        (let [res (usnpi/index (mock/request :get url {:ids ids}))]
+          (is (= (:status res) 200))
+          (is (= (-> res read-json :entry count) 1)))
+
+)
+)
+
+
+    )
 
 
   )
