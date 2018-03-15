@@ -3,6 +3,7 @@
   :url "https://npi.health-samurai.io/"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
+
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [cheshire "5.6.3"]
                  [org.clojure/java.jdbc "0.6.1"]
@@ -35,5 +36,9 @@
 
   :main usnpi.core
 
-  :profiles {:uberjar {:aot :all :omit-source true}}
+  :profiles {:uberjar {:aot :all :omit-source true}
+
+             :test {:dependencies [[ring/ring-mock "0.3.2"]]
+                    :resource-paths ["profiles/test/resources"]}}
+
   :uberjar-name "usnpi.jar")

@@ -19,9 +19,34 @@ pipeline:
   command: restore-cache
   key: usnpi
 
-# # Tests
-# - type: lein
-#   command: test
+# Tests
+- type: env
+  PG_IMG: usnpi_pg_test
+
+- type: bash
+  command: docker rm -f $PG_IMG || echo 'delele'
+
+- type: env
+  DB_PORT: 5432
+  DB_USER: postgres
+  DB_PASSWORD: postgres
+  DB_DATABASE: postgres
+
+- type: bash
+  command: docker run --name $PG_IMG -e POSTGRES_PASSWORD=$DB_PASSWORD -e POSTGRES_USER=$DB_USER -d postgres:10
+
+- type: env
+  DB_HOST:
+    command: "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $PG_IMG"
+
+- type: lein
+  command: migratus migrate
+
+- type: lein
+  command: test
+
+- type: bash
+  command: docker rm -f $PG_IMG || echo 'delele'
 
 # Build usnpi container
 - type: bash

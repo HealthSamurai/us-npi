@@ -66,9 +66,16 @@
                    "Access-Control-Expose-Headers" "Location, Content-Location, Category, Content-Type, X-total-count"}})
       (f req))))
 
+(defn- log-request
+  [request]
+  (log/debugf "%s %s %s"
+              (-> request :request-method name .toUpperCase)
+              (-> request :uri)
+              (-> request :query-string (or ""))))
 
-(defn index [{uri :uri qs :query-string :as req}]
-  (println "GET " uri " " qs)
+(defn index
+  [{uri :uri qs :query-string :as req}]
+  (log-request req)
   (if-let [h (routing/match [:get (str/lower-case uri)] routes)]
     (let [params (when qs (form-decode qs))]
       (-> ((:match h) (assoc req :route-params (:params h) :params params))

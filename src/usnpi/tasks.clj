@@ -103,7 +103,7 @@
     :interval (* minute 10)
     :offset minute}])
 
-(defn- seed-task
+(defn seed-task
   "Adds a new task into the DB. Handler is a string
   that points to a zero-argument function (e.g. 'namespace/function-name').
   Interval is a number of seconds stands for how often the task should be run.

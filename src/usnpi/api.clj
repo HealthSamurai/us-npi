@@ -83,4 +83,4 @@
   "Returns a log data."
   [request]
   {:status 200
-   :body (slurp "usnpi.log")})
+   :body (java.io.File. "usnpi.log")})

@@ -3,7 +3,6 @@
             [usnpi.error :refer [error!]]
             [clojure.tools.logging :as log]
             [clojure.string :as str]
-            [cheshire.core :as json]
             [dk.ative.docjure.spreadsheet :as xls]
             [clj-http.client :as client]
             [usnpi.models :as models]
@@ -99,13 +98,6 @@
 ;; npidata_20050523-20180213.csv
 (def ^:private
   re-dissem-full-csv #"(?i)npidata_\d{8}-\d{8}\.csv$")
-
-(defn- model->row
-  "Turns a model map into its database representation."
-  [model]
-  {:id (:id model)
-   :resource (json/generate-string model)
-   :deleted false})
 
 ;;
 ;; updates
@@ -215,10 +207,10 @@
       (let [practitioners (filter models/practitioner? models)
             organizations (filter models/organization? models)]
 
-        (when-let [rows (not-empty (map model->row practitioners))]
+        (when-let [rows (not-empty (map db/model->row practitioners))]
           (db/execute! (db/query-insert-practitioners rows)))
 
-        (when-let [rows (not-empty (map model->row organizations))]
+        (when-let [rows (not-empty (map db/model->row organizations))]
           (db/execute! (db/query-insert-organizations rows)))))))
 
 (defn task-dissemination
