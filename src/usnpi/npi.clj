@@ -3,6 +3,10 @@
             [clojure.string :as str])
   (:import [java.net URLEncoder]))
 
+;;
+;; Helpers
+;;
+
 (defn- url-encode [x] (when x (URLEncoder/encode x)))
 
 (defn- sanitize [x] (str/replace x #"[^a-zA-Z0-9]" ""))
@@ -21,6 +25,11 @@
 (defn- to-str
   [x]
   (if (keyword? x) (name x) (str x)))
+
+(defn- as-bundle
+  "Composes a Bundle JSON response from a list of JSON strings."
+  [models]
+  (format "{\"entry\": [%s]}" (str/join ",\n" (map :resource models))))
 
 (defn- gen-search-expression
   [fields]
@@ -65,7 +74,6 @@
   (format " select %s::text as resource from practitioner where not deleted and id = ? " to-resource-expr))
 
 (defn get-practitioner [{{npi :npi} :route-params :as req}]
-  (println "get pracititioner:" npi)
   (if-let [pr (time (:resource (first (db/query [practitioner-by-id-sql npi]))))]
     {:status 200 :body pr}
     {:status 404 :body (str "Practitioner with id = " npi " not found")}))
@@ -86,7 +94,6 @@ from (select %s as resource from practitioner where not deleted %s limit %s) x"
 
 (defn get-pracitioners [{params :params :as req}]
   (let [q (get-practitioners-query params)
-        _ (println q)
         prs (time (db/query [q]))]
     {:status 200
      :body (:bundle (first prs))}))
@@ -99,9 +106,8 @@ from (select %s as resource from practitioner where not deleted %s limit %s) x"
                       (->> (str/split ids #"\s*,\s*")
                            (mapv (fn [id] (str "'" (sanitize id) "'")))
                            (str/join ",")))]
-      (println sql)
       {:status 200
-       :body (->> (time (mapv :resource (db/query sql))))})
+       :body (as-bundle (db/query sql))})
     {:status 422
      :body {:message "ids parameter requried"}}))
 
@@ -126,11 +132,6 @@ from (select %s as resource from practitioner where not deleted %s limit %s) x"
     (if-let [row (first (db/query (db/to-sql q)))]
       {:status 200 :body (:resource row)}
       {:status 404 :body (format "Organization with id = %s not found." npi)})))
-
-(defn- as-bundle
-  "Composes a Bundle JSON response."
-  [models]
-  (format "{\"entry\": [%s]}" (str/join ",\n" (map :resource models))))
 
 (defn get-organizations-by-ids
   "Returns multiple organization entities by their ids."
