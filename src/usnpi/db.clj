@@ -78,10 +78,9 @@
 (defmacro with-tx-test
   "The same as `with-tx` but rolls back the transaction after all."
   [& body]
-  `(with-trx
+  `(with-tx
      (jdbc/db-set-rollback-only! *db*)
      ~@body))
-
 
 ;;
 ;; Custom queries
