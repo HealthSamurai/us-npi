@@ -20,6 +20,9 @@ pipeline:
   key: usnpi
 
 # Tests
+- type: bash
+  command: docker rm -f $PG_IMG || echo 'delele'
+
 - type: env
   PG_IMG: usnpi_pg_test
   DB_HOST: localhost
@@ -27,14 +30,18 @@ pipeline:
   DB_USER: postgres
   DB_PASSWORD: postgres
   DB_DATABASE: postgres
-- type: bash
-  command: docker stop $PG_IMG || echo 'stopped'
+
 - type: bash
   command: docker run --rm --name $PG_IMG -p 0.0.0.0:$DB_PORT:5432 -e POSTGRES_PASSWORD=$DB_PASSWORD -e POSTGRES_USER=$DB_USER -d postgres:10
+
 - type: lein
   command: migratus migrate
+
 - type: lein
   command: test
+
+- type: bash
+  command: docker rm -f $PG_IMG || echo 'delele'
 
 # Build usnpi container
 - type: bash
