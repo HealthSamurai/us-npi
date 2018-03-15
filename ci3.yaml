@@ -20,14 +20,13 @@ pipeline:
   key: usnpi
 
 # Tests
-- type: bash
-  command: source ./env
 - type: env
+  PG_IMG: usnpi_pg_test
   DB_HOST: localhost
   DB_PORT: 54321
-  DB_DATABASE:
-    command: $DB_USER
-  PG_IMG: usnpi_pg_test
+  DB_USER: postgres
+  DB_PASSWORD: postgres
+  DB_DATABASE: postgres
 - type: bash
   command: docker stop $PG_IMG || echo 'stopped'
 - type: bash
