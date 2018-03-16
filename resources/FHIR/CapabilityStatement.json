@@ -53,7 +53,7 @@
             {
               "name": "q",
               "type": "token",
-              "documentation": "Query term. Searches across given/middle/last names, city and state, e.g. ?q=david"
+              "documentation": "Query term. Searches across given/last names, city and state, e.g. ?q=david"
             }
           ]
         },

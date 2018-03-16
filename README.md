@@ -52,7 +52,7 @@
 
   Returns either a list of random practitioners or, if a query term was passed,
   a search result. The `q` is an optional query term that searches across
-  multiple fields including the last, middle and first names, city and
+  multiple fields including the last and first names, city and
   state. The `_count` is an optional integer to limit the number or entries in
   the result (100 by default). Returns a [Bundle node][bundle]. Example:
 
@@ -68,7 +68,6 @@
   results. For example:
 
   - `g:David` searches by a given name;
-  - `m:Charles` by a middle name;
   - `p:MD` by a prefix;
   - `z:JR` by a suffix;
   - `f:Thomson` by a family name;
