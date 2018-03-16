@@ -47,14 +47,12 @@
   (gen-search-expression
    [[:g :name 0 :given 0]
     [:g :name 0 :given 1]
-    [:m :name 0 :middle 0]
     [:p :name 0 :prefix 0]
     [:z :name 0 :siffix 0]
     [:f :name 0 :family]
 
     [:g :name 1 :given 0]
     [:g :name 1 :given 1]
-    [:m :name 1 :middle 0]
     [:p :name 1 :prefix 0]
     [:z :name 1 :siffix 0]
     [:f :name 1 :family]

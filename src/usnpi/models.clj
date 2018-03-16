@@ -64,12 +64,14 @@
 (defmethod rule-expand :join
   [{:keys [values separator]} data]
   (let [coll (rule-expand values data)]
-    (str/join separator coll)))
+    (not-empty
+     (str/trim
+      (str/join separator coll)))))
 
 (def ^{:private true
        :doc "Common address part."}
   rule-address
-  [{:user "work"
+  [{:use "work"
     :city :provider_business_practice_location_address_city_name
     :country :provider_business_practice_location_address_country_code_if_out
     :line [:provider_first_line_business_practice_location_address
@@ -135,15 +137,24 @@
   {:id :npi
    :resourceType "Practitioner"
 
-   :name [{:given [:provider_first_name]
+   ;; https://www.hl7.org/fhir/datatypes.html#HumanName
+   :name [{:text {:$type :join
+                  :separator " "
+                  :values [:provider_first_name
+                           :provider_middle_name
+                           :provider_last_name_legal_name]}
+           :given [:provider_first_name]
            :family :provider_last_name_legal_name
-           :middle [:provider_middle_name]
            :suffix [:provider_name_suffix_text]
            :prefix [:provider_name_prefix_text
                     :provider_credential_text]}
 
-          {:given  [:provider_other_first_name]
-           :middle [:provider_other_middle_name]
+          {:text {:$type :join
+                  :separator " "
+                  :values [:provider_other_first_name
+                           :provider_other_middle_name
+                           :provider_other_last_name]}
+           :given  [:provider_other_first_name]
            :family :provider_other_last_name
            :suffix [:provider_other_name_suffix_text]
            :prefix [:provider_other_name_prefix_text
@@ -156,28 +167,18 @@
    :address rule-address
    :telecom rule-telecom
 
+   ;; https://www.hl7.org/fhir/datatypes.html#Identifier
    :identifier
    (vec (for [i (range 1 50)]
           {:value  (postfix :other_provider_identifier i)
-           :state  (postfix :other_provider_identifier_state i)
-           :code   {:$type :map
-                    :column (postfix :other_provider_identifier_type_code i)
-                    :map {"01" "OTHER"
-                          "02" "MEDICARE UPIN"
-                          "04" "MEDICARE ID-TYPE UNSPECIFIED"
-                          "05" "MEDICAID"
-                          "06" "MEDICARE OSCAR/CERTIFICATION"
-                          "07" "MEDICARE NSC"
-                          "08" "MEDICARE PIN"}}
-           :issuer (postfix :other_provider_identifier_issuer i)}))
+           :assigner (postfix :other_provider_identifier_issuer i)}))
 
    :qualification
    (vec (for [i (range 1 10)]
           {:$type :when
            :column (postfix :provider_license_number i)
-           :expression {:identifier {:system "http://fhir.us/us-license"
-                                     :value (postfix :provider_license_number i)}
-                        :state      (postfix :provider_license_number_state_code i)
+           :expression {:identifier [{:system "http://fhir.us/us-license"
+                                      :value (postfix :provider_license_number i)}]
                         :code       {:coding [{:system "http://nucc.org/provider-taxonomy"
                                                :code (postfix :healthcare_provider_taxonomy_code i)}]}}}))})
 
