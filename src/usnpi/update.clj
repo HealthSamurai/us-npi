@@ -95,10 +95,6 @@
 (def ^:private
   re-dissem-csv #"(?i)npidata_pfile_\d{8}-\d{8}\.csv$")
 
-;; npidata_20050523-20180213.csv
-(def ^:private
-  re-dissem-full-csv #"(?i)npidata_\d{8}-\d{8}\.csv$")
-
 ;;
 ;; updates
 ;;
@@ -262,7 +258,7 @@
       (log/infof "The FULL dissemination URL %s has already been loaded." url-zip)
 
       (let [stream (get-stream url-zip)
-            result (seek-stream stream re-dissem-full-csv)]
+            result (seek-stream stream re-dissem-csv)]
 
         (when-not result
           (error! "Cannot find a FULL dissemination file an archive."))
