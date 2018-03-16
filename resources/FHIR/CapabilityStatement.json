@@ -23,7 +23,7 @@
   "fhirVersion": "1.0.0",
   "acceptUnknown": "no",
   "format": [
-    "json",
+    "json"
   ],
   "rest": [
     {
