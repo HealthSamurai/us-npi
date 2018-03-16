@@ -138,23 +138,13 @@
    :resourceType "Practitioner"
 
    ;; https://www.hl7.org/fhir/datatypes.html#HumanName
-   :name [{:text {:$type :join
-                  :separator " "
-                  :values [:provider_first_name
-                           :provider_middle_name
-                           :provider_last_name_legal_name]}
-           :given [:provider_first_name]
+   :name [{:given [:provider_first_name :provider_middle_name]
            :family :provider_last_name_legal_name
            :suffix [:provider_name_suffix_text]
            :prefix [:provider_name_prefix_text
                     :provider_credential_text]}
 
-          {:text {:$type :join
-                  :separator " "
-                  :values [:provider_other_first_name
-                           :provider_other_middle_name
-                           :provider_other_last_name]}
-           :given  [:provider_other_first_name]
+          {:given  [:provider_other_first_name :provider_other_middle_name]
            :family :provider_other_last_name
            :suffix [:provider_other_name_suffix_text]
            :prefix [:provider_other_name_prefix_text
