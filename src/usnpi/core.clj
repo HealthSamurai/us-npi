@@ -5,6 +5,7 @@
             [usnpi.beat :as beat]
             [usnpi.api :as api]
             [usnpi.db :as db]
+            [usnpi.fhir :as fhir]
             [usnpi.env :as env :refer [env]]
             [clojure.tools.logging :as log]
             [org.httpkit.server :as server]
@@ -31,6 +32,8 @@
    "organization" {:GET #'npi/get-organizations
                    "$batch" {:GET #'npi/get-organizations-by-ids}
                    [:npi] {:GET #'npi/get-organization}}
+
+   "metadata" {:GET #'fhir/api-metadata}
 
    "system" {"env" {:GET #'api/api-env}
              "updates" {:GET #'api/api-updates}

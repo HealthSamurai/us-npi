@@ -1,0 +1,91 @@
+{
+  "resourceType": "CapabilityStatement",
+  "id": "usnpi",
+  "name": "US NPI Capability Statement",
+  "status": "draft",
+  "date": "2018-03-16",
+  "publisher": "Health Samurai",
+  "contact": [
+    {
+      "telecom": [
+        {
+          "system": "url",
+          "value": "http://health-samurai.io/"
+        }
+      ]
+    }
+  ],
+  "description": "The official US NPI registry converted to FHIR (Practitioners and Organizations).",
+  "kind": "capability",
+  "software": {
+    "name": "Health Samurai US NPI Server"
+  },
+  "fhirVersion": "1.0.0",
+  "acceptUnknown": "no",
+  "format": [
+    "json"
+  ],
+  "rest": [
+    {
+      "mode": "server",
+      "resource": [
+        {
+          "type": "Practitioner",
+          "interaction": [
+            {
+              "code": "read"
+            },
+            {
+              "code": "search-type"
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "_id",
+              "type": "token",
+              "documentation": "Standard _id parameter, e.g. 1538375811"
+            },
+            {
+              "name": "ids",
+              "type": "token",
+              "documentation": "Comma-separated list of NPI IDs, e.g. ?ids=1538375811,1447466727"
+            },
+            {
+              "name": "q",
+              "type": "token",
+              "documentation": "Query term. Searches across given/middle/last names, city and state, e.g. ?q=david"
+            }
+          ]
+        },
+        {
+          "type": "Organization",
+          "interaction": [
+            {
+              "code": "read"
+            },
+            {
+              "code": "search-type"
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "_id",
+              "type": "token",
+              "documentation": "Standard _id parameter, e.g. 1972660348"
+            },
+            {
+              "name": "ids",
+              "type": "token",
+              "documentation": "Comma-separated list of NPI IDs, e.g. ?ids=1770796096,1700387479"
+            },
+            {
+              "name": "q",
+              "type": "token",
+              "documentation": "Query term. Searches across name, city and state, e.g. ?q=WALMART"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

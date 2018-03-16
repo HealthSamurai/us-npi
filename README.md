@@ -15,6 +15,7 @@
 - [REST endpoints](#rest-endpoints)
   * [Practitioner](#practitioner)
   * [Organizations](#organizations)
+  * [Other FHIR endpoints](#other-fhir-endpoints)
   * [System status](#system-status)
 - [Install](#install)
 - [Local development](#local-development)
@@ -115,6 +116,17 @@
   - `n:Walmart` searches by a name;
   - `s:TX` by a USA state;
   - `c:Rogersville` by a city name.
+
+### Other FHIR endpoints
+
+- `GET /metadata`
+
+  Returns a CapabilityStatement object that represents other FHIR
+  endpoints. Example:
+
+  ```bash
+  curl https://npi.health-samurai.io/metadata
+  ```
 
 ### System status
 
