@@ -261,7 +261,7 @@
             result (seek-stream stream re-dissem-csv)]
 
         (when-not result
-          (error! "Cannot find a FULL dissemination file an archive."))
+          (error! "Cannot find a FULL dissemination file in archive."))
 
         (process-dissemination stream)
 
