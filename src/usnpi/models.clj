@@ -161,7 +161,8 @@
    :identifier
    (vec (for [i (range 1 50)]
           {:value  (postfix :other_provider_identifier i)
-           :assigner (postfix :other_provider_identifier_issuer i)}))
+           ;; :assigner (postfix :other_provider_identifier_issuer i)
+           }))
 
    :qualification
    (vec (for [i (range 1 10)]
