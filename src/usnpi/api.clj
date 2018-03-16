@@ -4,13 +4,7 @@
             [usnpi.beat :as beat]
             [usnpi.env :refer [env]]
             [usnpi.warmup :as wm]
-            [cheshire.core :as json]))
-
-(defn- json-resp
-  [data]
-  {:status 200
-   :headers {"Content-Type" "application/json"}
-   :body (json/generate-string data {:pretty true})})
+            [usnpi.http :refer [json-resp]]))
 
 (defn api-env
   "An API that returns some of ENV vars."

@@ -1,13 +1,11 @@
 (ns usnpi.npi
   (:require [usnpi.db :as db]
-            [clojure.string :as str])
-  (:import [java.net URLEncoder]))
+            [clojure.string :as str]
+            [usnpi.http :as http]))
 
 ;;
 ;; Helpers
 ;;
-
-(defn- url-encode [x] (when x (URLEncoder/encode x)))
 
 (defn- sanitize [x] (str/replace x #"[^a-zA-Z0-9]" ""))
 
@@ -74,9 +72,9 @@
   (format " select %s::text as resource from practitioner where not deleted and id = ? " to-resource-expr))
 
 (defn get-practitioner [{{npi :npi} :route-params :as req}]
-  (if-let [pr (time (:resource (first (db/query [practitioner-by-id-sql npi]))))]
-    {:status 200 :body pr}
-    {:status 404 :body (str "Practitioner with id = " npi " not found")}))
+  (if-let [pr (:resource (first (db/query [practitioner-by-id-sql npi])))]
+    (http/set-json (http/http-resp pr))
+    (http/err-resp 404 "Practitioner with id = %s not found." npi)))
 
 (defn get-practitioners-query [{q :q cnt :_count}]
   (let [cond (cond-> []
@@ -94,10 +92,8 @@ from (select %s as resource from practitioner where not deleted %s limit %s) x"
 
 (defn get-pracitioners [{params :params :as req}]
   (let [q (get-practitioners-query params)
-        prs (time (db/query [q]))]
-    {:status 200
-     :body (:bundle (first prs))}))
-
+        prs (db/query [q])]
+    (http/set-json (http/http-resp (:bundle (first prs))))))
 
 (defn get-practitioners-by-ids [{params :params :as req}]
   (if-let [ids  (:ids params)]
@@ -106,10 +102,8 @@ from (select %s as resource from practitioner where not deleted %s limit %s) x"
                       (->> (str/split ids #"\s*,\s*")
                            (mapv (fn [id] (str "'" (sanitize id) "'")))
                            (str/join ",")))]
-      {:status 200
-       :body (as-bundle (db/query sql))})
-    {:status 422
-     :body {:message "ids parameter requried"}}))
+      (http/set-json (http/http-resp (as-bundle (db/query sql)))))
+    (http/err-resp 400 "Parameter ids is malformed.")))
 
 ;;
 ;; Organizations
@@ -130,8 +124,8 @@ from (select %s as resource from practitioner where not deleted %s limit %s) x"
            :from [:organizations]
            :where [:and [:not :deleted] [:= :id npi]]}]
     (if-let [row (first (db/query (db/to-sql q)))]
-      {:status 200 :body (:resource row)}
-      {:status 404 :body (format "Organization with id = %s not found." npi)})))
+      (http/set-json (http/http-resp (:resource row)))
+      (http/err-resp 404 "Organization with id = %s not found." npi))))
 
 (defn get-organizations-by-ids
   "Returns multiple organization entities by their ids."
@@ -141,10 +135,8 @@ from (select %s as resource from practitioner where not deleted %s limit %s) x"
              :from [:organizations]
              :where [:and [:not :deleted] [:in :id ids]]}
           orgs (db/query (db/to-sql q))]
-      {:status 200
-       :body (as-bundle orgs)})
-    {:status 400
-     :body (format "Parameter ids is malformed.")}))
+      (http/set-json (http/http-resp (as-bundle orgs))))
+    (http/err-resp 400 "Parameter ids is malformed.")))
 
 (defn get-organizations
   "Returns multiple organization entities by a query term."
@@ -165,5 +157,4 @@ from (select %s as resource from practitioner where not deleted %s limit %s) x"
 
         orgs (db/query (db/to-sql q))]
 
-    {:status 200
-     :body (as-bundle orgs)}))
+    (http/set-json (http/http-resp (as-bundle orgs)))))
