@@ -18,7 +18,9 @@
   (-> task :handler symbol resolve))
 
 (defn- task-update [task fields]
-  (db/update! :tasks fields ["id = ?" (:id task)]))
+  (let [run-at (-> task :interval time/next-time)
+        params (assoc fields :next_run_at run-at)]
+    (db/update! :tasks params ["id = ?" (:id task)])))
 
 (defn- task-running
   "Marks a task as being run at the moment."
@@ -28,18 +30,14 @@
 
 (defn- task-success [task]
   "Marks a task as being finished successfully."
-  (let [run-at (-> task :interval time/next-time)]
-    (task-update task {:success true
-                       :message "Successfully run."
-                       :next_run_at run-at})))
+  (task-update task {:success true
+                     :message "Successfully run."}))
 
 (defn- task-failure
   "Marks a task as being failed because of exception."
   [task e]
-  (let [run-at (-> task :interval time/next-time)]
-    (task-update task {:success false
-                       :message (error/exc-msg e)
-                       :next_run_at run-at})))
+  (task-update task {:success false
+                     :message (error/exc-msg e)}))
 
 (defn task-list
   "Returns all the tasks from the database needed to be run."
