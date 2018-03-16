@@ -5,23 +5,23 @@
 all: uberjar-build uberjar-run
 
 repl:
-	lein repl
+	source ./env_dev && lein repl
 
 repl-test:
-	lein with-profile +test repl
+	source ./env_test && lein with-profile +test repl
 
 uberjar-build:
 	lein uberjar
 
 uberjar-run:
-	java -jar ./target/usnpi.jar
+	source ./env_dev && java -jar ./target/usnpi.jar
 
 migrate:
 	lein migratus migrate
 
 .PHONY: test
 test:
-	lein test
+	source ./env_test && lein test
 
 .PHONY: deploy
 deploy:
