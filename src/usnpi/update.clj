@@ -93,7 +93,7 @@
 
 ;; npidata_pfile_20180219-20180225.csv
 (def ^:private
-  re-dissem-csv #"(?i)npidata_pfile_\d{8}-\d{8}\.csv$")
+  re-dissem-csv #"(?i)_\d{8}-\d{8}\.csv$")
 
 ;;
 ;; updates

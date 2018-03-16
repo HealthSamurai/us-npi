@@ -61,7 +61,7 @@
     (db/execute! "truncate practitioner")
     (db/execute! "truncate organizations")
     (db/execute! "update tasks set next_run_at = now() where handler = 'usnpi.update/task-full-dissemination'")
-    (db/execute! "truncate npi_updates"))
+    (db/execute! "delete from npi_updates where type = 'dissemination-full'"))
   (when-not (beat/status)
     (beat/start))
   (json-resp
