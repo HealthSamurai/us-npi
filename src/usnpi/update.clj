@@ -8,6 +8,9 @@
             [usnpi.models :as models]
             [hickory.core :as hickory]
             [hickory.select :as s])
+
+  ;; better support for zip-streams
+  ;; https://stackoverflow.com/a/15522678/1376325
   (:import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
            org.apache.commons.compress.archivers.ArchiveEntry))
 
