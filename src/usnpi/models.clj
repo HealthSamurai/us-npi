@@ -56,6 +56,14 @@
   (when-let [field (rule-expand column data)]
     (rule-expand expression data)))
 
+;; "https://www.hl7.org/fhir/extensibility.html#Extension"
+(defmethod rule-expand :extension
+  [{:keys [extension] :as m} data]
+  (when-let [exts (rule-expand extension data)]
+    (-> m
+        (assoc :extension exts)
+        (dissoc :$type))))
+
 (defmethod rule-expand :map
   [{:keys [column map]} data]
   (when-let [field (rule-expand column data)]
@@ -132,6 +140,12 @@
                             :use "work"
                             :value :provider_business_practice_location_address_telephone_number}}]]})
 
+(defn- npi-extension
+  [& child-nodes]
+  {:$type :extension
+   :url "https://npiregistry.cms.hhs.gov/"
+   :extension (vec child-nodes)})
+
 (def ^:private
   rule-practitioner
   {:id :npi
@@ -161,15 +175,39 @@
    :identifier
    (vec (for [i (range 1 50)]
           {:value  (postfix :other_provider_identifier i)
-           ;; :assigner (postfix :other_provider_identifier_issuer i)
-           }))
+           :extension (npi-extension
+                       {:$type :when
+                        :column (postfix :other_provider_identifier_state i)
+                        :expression {:url (name :other_provider_identifier_state)
+                                     :valueString (postfix :other_provider_identifier_state i)}}
+                       {:$type :when
+                        :column (postfix :other_provider_identifier_type_code i)
+                        :expression {:url (name :other_provider_identifier_type_code)
+                                     :valueString {:$type :map
+                                                   :column (postfix :other_provider_identifier_type_code i)
+                                                   :map {"01" "OTHER"
+                                                         "02" "MEDICARE UPIN"
+                                                         "04" "MEDICARE ID-TYPE UNSPECIFIED"
+                                                         "05" "MEDICAID"
+                                                         "06" "MEDICARE OSCAR/CERTIFICATION"
+                                                         "07" "MEDICARE NSC"
+                                                         "08" "MEDICARE PIN"}}}}
+                       {:$type :when
+                        :column (postfix :other_provider_identifier_issuer i)
+                        :expression {:url (name :other_provider_identifier_issuer)
+                                     :valueString (postfix :other_provider_identifier_issuer i)}})}))
 
    :qualification
    (vec (for [i (range 1 10)]
           {:$type :when
            :column (postfix :provider_license_number i)
            :expression {:identifier [{:system "http://fhir.us/us-license"
-                                      :value (postfix :provider_license_number i)}]
+                                      :value (postfix :provider_license_number i)
+                                      :extension (npi-extension
+                                                  {:$type :when
+                                                   :column (postfix :provider_license_number_state_code i)
+                                                   :expression {:url (name :provider_license_number_state_code)
+                                                                :valueString (postfix :provider_license_number_state_code i)}})}]
                         :code       {:coding [{:system "http://nucc.org/provider-taxonomy"
                                                :code (postfix :healthcare_provider_taxonomy_code i)}]}}}))})
 
