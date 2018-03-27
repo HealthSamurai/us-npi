@@ -174,7 +174,7 @@
    ;; https://www.hl7.org/fhir/datatypes.html#Identifier
    :identifier
    (vec (for [i (range 1 50)]
-          {:value  (postfix :other_provider_identifier i)
+          {:value (postfix :other_provider_identifier i)
            :extension (npi-extension
                        {:$type :when
                         :column (postfix :other_provider_identifier_state i)

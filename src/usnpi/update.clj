@@ -149,7 +149,7 @@
     (-> resp :body ZipArchiveInputStream.)))
 
 (defn- seek-stream
-  "For a given zip stream, trues to position its internal pointer
+  "For a given zip stream, tries to position its internal pointer
   to a specific file entry matching its name against a given pattern.
   Returns true or false meaning whether it was successful or not."
   [^ZipArchiveInputStream stream re]
