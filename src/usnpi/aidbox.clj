@@ -1,8 +1,6 @@
 (ns usnpi.aidbox
   (:require [clojure.walk :as walk]
-            [clojure.string :as str]
-
-            ))
+            [clojure.string :as str]))
 
 (defn reference?
   [x]
@@ -33,14 +31,38 @@
   (and (vector? x)
        (= (count x) 2)))
 
-(defn value-x? [[k _]]
-  (and (keyword? k)
-       (re-matches #"^value[A-Z].*" (name k))))
+(defn field-x? [x]
+  (re-matches #"^value[A-Z].*" (name x)))
+
+(defn value-x? [x]
+  (and (map-node? x)
+       (let [[k _] x]
+         (and (keyword? k)
+              (field-x? k)))))
+
+(defn split-ref [x]
+  (let [regex #"(?<=[a-z])(?=[A-Z])"]
+    (str/split (name x) regex 2)))
 
 (defn ->value-x [[k v]]
-  (let [regex #"(?<=[a-z])(?=[A-Z])"
-        [_ Type] (str/split (name k) regex 2)]
+  (let [[_ Type] (split-ref k)]
     {:value {(keyword Type) v}}))
+
+(defn extension? [x]
+  (and (map? x)
+       (:url x)
+       (-> x (dissoc :url) not-empty)))
+
+(defn ->extension [x]
+  [x]
+  {(:url x) (dissoc x :url)})
+
+(defn extensions? [x]
+  (and (map? x)
+       (:extension x)))
+
+(defn ->extensions [x]
+  {(:url x) (apply merge (dissoc x :extension :url) (:extension x))})
 
 (defn walker [x]
   (cond
@@ -48,9 +70,14 @@
     (reference? x)
     (->reference x)
 
-    (and (map-node? x)
-         (value-x? x))
+    (and (map-node? x) (value-x? x))
     (->value-x x)
+
+    (extensions? x)
+    (->extensions x)
+
+    (extension? x)
+    (->extension x)
 
     :else x))
 
