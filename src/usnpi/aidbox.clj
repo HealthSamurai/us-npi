@@ -65,6 +65,7 @@
   {(:url x) (apply merge (dissoc x :extension :url) (:extension x))})
 
 (defn walker [x]
+  (println x)
   (cond
 
     (reference? x)
@@ -83,3 +84,43 @@
 
 (defn ->aidbox [fhir]
   (walk/postwalk walker fhir))
+
+(defn upd-reference [m]
+  (if (:reference m)
+    (assoc m :reference {:id 1 :resourceType :Foo})
+    m))
+
+(defn upd-value-x [m]
+  (if (:valueString m)
+    (-> m
+        (dissoc :valueString)
+        (assoc-in [:value :String] (:valueString m)))
+    m))
+
+(defn upd-url [m]
+  (if (:url m)
+    {(:url m) (dissoc m :url)}
+    m))
+
+(defn upd-url-extension [m]
+  (if (and (:url m) (:extension m))
+    {(:url m) (apply merge (:extension m))}
+    m))
+
+(defn upd-extension [m]
+  (if (and (:extension m) (not (:url m)))
+    (apply merge (dissoc m :extension) (:extension m))
+    m))
+
+(defn bar [m]
+  (if (map? m)
+    (-> m
+        upd-reference
+        upd-value-x
+        upd-extension
+        upd-url-extension
+        upd-url)
+    m))
+
+(defn ->aidbox4 [fhir]
+  (walk/postwalk bar fhir))
