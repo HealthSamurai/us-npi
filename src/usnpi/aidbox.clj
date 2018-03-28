@@ -2,31 +2,6 @@
   (:require [clojure.walk :as walk]
             [clojure.string :as str]))
 
-(defn reference?
-  [x]
-  (and (map? x)
-       (:reference x)))
-
-(defn reference-id?
-  [{:keys [reference]}]
-  (re-matches #"^(\w+?)/(\w+?)$" reference))
-
-(defn reference-uri?
-  [{:keys [reference]}]
-  (re-find #"^(?i)(http)|(https)://" reference))
-
-(defn ->reference
-  [{:keys [reference] :as x}]
-  (cond
-    (reference-id? x)
-    (let [[resource id] (str/split reference #"/")]
-      {:id id :resourceType resource})
-
-    (reference-uri? x)
-    {:uri reference}
-
-    :else x))
-
 (defn map-node? [x]
   (and (vector? x)
        (= (count x) 2)))
@@ -64,31 +39,41 @@
 (defn ->extensions [x]
   {(:url x) (apply merge (dissoc x :extension :url) (:extension x))})
 
-(defn walker [x]
-  (println x)
+;;
+;; Reference
+;;
+
+(defn reference?
+  [x]
+  (:reference x))
+
+(defn reference-id?
+  [{:keys [reference]}]
+  (re-matches #"^(\w+?)/(\w+?)$" reference))
+
+(defn reference-uri?
+  [{:keys [reference]}]
+  (re-find #"^(?i)(http)|(https)://" reference))
+
+(defn ->reference
+  [{:keys [reference] :as x}]
   (cond
 
-    (reference? x)
-    (->reference x)
+    (reference-id? x)
+    (let [[resource id] (str/split reference #"/")]
+      {:id id :resourceType resource})
 
-    (and (map-node? x) (value-x? x))
-    (->value-x x)
-
-    (extensions? x)
-    (->extensions x)
-
-    (extension? x)
-    (->extension x)
+    (reference-uri? x)
+    {:uri reference}
 
     :else x))
 
-(defn ->aidbox [fhir]
-  (walk/postwalk walker fhir))
-
 (defn upd-reference [m]
-  (if (:reference m)
-    (assoc m :reference {:id 1 :resourceType :Foo})
+  (if (reference? m)
+    (->reference m)
     m))
+
+;;
 
 (defn upd-value-x [m]
   (if (:valueString m)
