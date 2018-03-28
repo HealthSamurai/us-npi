@@ -2,42 +2,64 @@
   (:require [clojure.walk :as walk]
             [clojure.string :as str]))
 
-(defn map-node? [x]
-  (and (vector? x)
-       (= (count x) 2)))
+;;
+;; X-fields
+;;
 
-(defn field-x? [x]
-  (re-matches #"^value[A-Z].*" (name x)))
+(def x-fields
+  #{:valueInteger
+    :valueUnsignedInt
+    :valuePositiveInt
+    :valueDecimal
+    :valueDateTime
+    :valueDate
+    :valueTime
+    :valueInstant
+    :valueString
+    :valueUri
+    :valueOid
+    :valueUuid
+    :valueId
+    :valueBoolean
+    :valueCode
+    :valueMarkdown
+    :valueBase64Binary
+    :valueCoding
+    :valueCodeableConcept
+    :valueAttachment
+    :valueIdentifier
+    :valueQuantity
+    :valueSampledData
+    :valueRange
+    :valuePeriod
+    :valueRatio
+    :valueHumanName
+    :valueAddress
+    :valueContactPoint
+    :valueTiming
+    :valueReference
+    :valueAnnotation
+    :valueSignature
+    :valueMeta})
 
-(defn value-x? [x]
-  (and (map-node? x)
-       (let [[k _] x]
-         (and (keyword? k)
-              (field-x? k)))))
+(defn get-x-field [m]
+  (some x-fields (keys m)))
 
-(defn split-ref [x]
+(defn split-x-field [x]
   (let [regex #"(?<=[a-z])(?=[A-Z])"]
     (str/split (name x) regex 2)))
 
-(defn ->value-x [[k v]]
-  (let [[_ Type] (split-ref k)]
+(defn ->value-x [k v]
+  (let [[_ Type] (split-x-field k)]
     {:value {(keyword Type) v}}))
 
-(defn extension? [x]
-  (and (map? x)
-       (:url x)
-       (-> x (dissoc :url) not-empty)))
-
-(defn ->extension [x]
-  [x]
-  {(:url x) (dissoc x :url)})
-
-(defn extensions? [x]
-  (and (map? x)
-       (:extension x)))
-
-(defn ->extensions [x]
-  {(:url x) (apply merge (dissoc x :extension :url) (:extension x))})
+(defn upd-value-x [m]
+  (if-let [x-field (get-x-field m)]
+    (let [x-value (get m x-field)]
+      (-> m
+          (dissoc x-field)
+          (merge (->value-x x-field x-value))))
+    m))
 
 ;;
 ;; Reference
@@ -74,22 +96,22 @@
     m))
 
 ;;
+;; Extensions
+;;
 
-(defn upd-value-x [m]
-  (if (:valueString m)
-    (-> m
-        (dissoc :valueString)
-        (assoc-in [:value :String] (:valueString m)))
-    m))
+(defn url-shrink [url]
+  (last (str/split url #"/")))
 
 (defn upd-url [m]
   (if (:url m)
-    {(:url m) (dissoc m :url)}
+    (let [key (-> m :url url-shrink)]
+      {key (dissoc m :url)})
     m))
 
 (defn upd-url-extension [m]
   (if (and (:url m) (:extension m))
-    {(:url m) (apply merge (:extension m))}
+    (let [key (-> m :url url-shrink)]
+      {key (apply merge (:extension m))})
     m))
 
 (defn upd-extension [m]
@@ -97,7 +119,11 @@
     (apply merge (dissoc m :extension) (:extension m))
     m))
 
-(defn bar [m]
+;;
+;; Common
+;;
+
+(defn walker [m]
   (if (map? m)
     (-> m
         upd-reference
@@ -107,5 +133,5 @@
         upd-url)
     m))
 
-(defn ->aidbox4 [fhir]
-  (walk/postwalk bar fhir))
+(defn ->aidbox [fhir]
+  (walk/postwalk walker fhir))
