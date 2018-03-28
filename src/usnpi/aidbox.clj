@@ -6,6 +6,7 @@
 ;; X-fields
 ;;
 
+;; https://www.hl7.org/fhir/extensibility.html#Extension
 (def x-fields
   #{:valueInteger
     :valueUnsignedInt
@@ -52,6 +53,9 @@
 (defn ->value-x [k v]
   (let [[_ Type] (split-x-field k)]
     {:value {(keyword Type) v}}))
+
+(defn get-x-value [m]
+  (some-> m :value first second))
 
 (defn upd-value-x [m]
   (if-let [x-field (get-x-field m)]
@@ -102,10 +106,11 @@
 (defn url-shrink [url]
   (last (str/split url #"/")))
 
+
 (defn upd-url [m]
-  (if (:url m)
+  (if (and (:url m) (get-x-value m))
     (let [key (-> m :url url-shrink)]
-      {key (dissoc m :url)})
+      {key (get-x-value m)})
     m))
 
 (defn upd-url-extension [m]
@@ -125,7 +130,7 @@
 
 (defn walker [m]
   (if (map? m)
-    (-> m
+    (-> m ;; the order matters
         upd-reference
         upd-value-x
         upd-extension
