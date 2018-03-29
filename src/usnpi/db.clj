@@ -5,7 +5,8 @@
             [cheshire.core :as json]
             [clojure.tools.logging :as log]
             [migratus.core :as migratus]
-            [usnpi.env :refer [env]]))
+            [usnpi.env :refer [env]])
+  (:import org.postgresql.util.PGobject))
 
 
 (def ^:private
@@ -20,6 +21,27 @@
 (def ^:dynamic
   *db* {:dbtype "postgresql"
         :connection-uri db-url})
+
+;;
+;; DB types
+;;
+
+(defmulti pgobj->clj
+  (fn [pgobj] (.getType pgobj)))
+
+(defmethod pgobj->clj :default
+  [pgobj]
+  (-> pgobj .getValue))
+
+(defmethod pgobj->clj "jsonb"
+  [pgobj]
+  (-> pgobj .getValue (json/parse-string true)))
+
+(extend-protocol jdbc/IResultSetReadColumn
+
+  PGobject
+  (result-set-read-column [pgobj _metadata _index]
+    (pgobj->clj pgobj)))
 
 ;;
 ;; Helpers
