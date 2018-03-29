@@ -82,17 +82,22 @@
   (re-find #"^(?i)(http)|(https)://" reference))
 
 (defn ->reference
-  [{:keys [reference] :as x}]
+  [{:keys [reference] :as m}]
   (cond
 
-    (reference-id? x)
+    (reference-id? m)
     (let [[resource id] (str/split reference #"/")]
-      {:id id :resourceType resource})
+      (-> m
+          (dissoc :reference)
+          (assoc :id id)
+          (assoc :resourceType resource)))
 
-    (reference-uri? x)
-    {:uri reference}
+    (reference-uri? m)
+    (-> m
+        (dissoc :reference)
+        (assoc :uri reference))
 
-    :else x))
+    :else m))
 
 (defn upd-reference [m]
   (if (reference? m)
@@ -106,11 +111,12 @@
 (defn url-shrink [url]
   (last (str/split url #"/")))
 
-
 (defn upd-url [m]
-  (if (and (:url m) (get-x-value m))
+  (if (:url m)
     (let [key (-> m :url url-shrink)]
-      {key (get-x-value m)})
+      (if-let [x-value (get-x-value m)]
+        {key x-value}
+        {key (dissoc m :url)}))
     m))
 
 (defn upd-url-extension [m]
