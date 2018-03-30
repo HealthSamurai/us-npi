@@ -3,11 +3,11 @@
             [clojure.string :as str]
             [usnpi.http :as http]))
 
+(def sql-limit 100)
+
 ;;
 ;; Helpers
 ;;
-
-(defn- sanitize [x] (str/replace x #"[^a-zA-Z0-9]" ""))
 
 (defn- parse-ids
   [ids-str]
@@ -27,7 +27,7 @@
 (defn- as-bundle
   "Composes a Bundle JSON response from a list of JSON strings."
   [models]
-  (format "{\"entry\": [%s]}" (str/join ",\n" (map :resource models))))
+  {:entry (map :resource models)})
 
 (defn- gen-search-expression
   [fields]
@@ -43,7 +43,7 @@
 ;;
 
 (def ^:private
-  search-expression
+  sql-like-clause-pract
   (gen-search-expression
    [[:g :name 0 :given 0]
     [:g :name 0 :given 1]
@@ -60,99 +60,98 @@
     [:s :address 0 :state]
     [:c :address 0 :city]]))
 
+(defn sql-like-pract [term]
+  (db/raw (format "\n%s ilike '%%%s%%'" sql-like-clause-pract term)))
+
 (def trgrm_idx
   (format "CREATE INDEX IF NOT EXISTS pract_trgm_idx ON practitioner USING GIST ((\n%s\n) gist_trgm_ops);"
-          search-expression))
+          sql-like-clause-pract))
 
+;; drop
 (def to-resource-expr "(resource || jsonb_build_object('id', id, 'resourceType', 'Practitioner'))")
 
-(def practitioner-by-id-sql
-  (format " select %s::text as resource from practitioner where not deleted and id = ? " to-resource-expr))
+(def query-practitioner
+  {:select [:resource]
+   :from [:practitioner]
+   :where [:and [:not :deleted]]})
 
-(defn get-practitioner [{{npi :npi} :route-params :as req}]
-  (if-let [pr (:resource (first (db/query [practitioner-by-id-sql npi])))]
-    (http/set-json (http/http-resp pr))
-    (http/err-resp 404 "Practitioner with id = %s not found." npi)))
+(defn get-practitioner
+  [request]
+  (let [npi (-> request :route-params :npi)
+        q (update query-practitioner :where conj [:= :id npi])]
+    (if-let [model (first (db/query (db/to-sql q)))]
+      (http/json-resp (:resource model))
+      (http/err-resp 404 "Practitioner with id = %s not found." npi))))
 
-(defn get-practitioners-query [{q :q cnt :_count}]
-  (let [cond (cond-> []
-               q (into (->> (str/split q #"\s+")
-                            (remove str/blank?)
-                            (mapv #(format "%s ilike '%%%s%%'" search-expression %)))))]
-    (format "
-select jsonb_build_object('entry', jsonb_agg(row_to_json(x.*)))::text as bundle
-from (select %s as resource from practitioner where not deleted %s limit %s) x"
-            to-resource-expr
-            (if (not (empty? cond))
-              (str "\nAND\n" (str/join "\nAND\n" cond))
-              "")
-            (or cnt "100"))))
-
-(defn get-pracitioners [{params :params :as req}]
-  (let [q (get-practitioners-query params)
-        prs (db/query [q])]
-    (http/set-json (http/http-resp (:bundle (first prs))))))
-
-(defn get-practitioners-by-ids [{params :params :as req}]
-  (if-let [ids  (:ids params)]
-    (let [sql (format "select %s as resource from practitioner where not deleted and id in (%s)"
-                      to-resource-expr
-                      (->> (str/split ids #"\s*,\s*")
-                           (mapv (fn [id] (str "'" (sanitize id) "'")))
-                           (str/join ",")))]
-      (http/set-json (http/http-resp (as-bundle (db/query sql)))))
+(defn get-practitioners-by-ids
+  [request]
+  (if-let [ids (some->> request :params :ids parse-ids)]
+    (let [q (update query-practitioner :where conj [:in :id ids])
+          models (db/query (db/to-sql q))]
+      (http/json-resp (as-bundle models)))
     (http/err-resp 400 "Parameter ids is malformed.")))
+
+(defn get-pracitioners
+  [request]
+  (let [words (some-> request :params :q parse-words)
+        limit (-> request :params :_count (or sql-limit))
+
+        q (assoc query-practitioner :limit limit)
+
+        q (if-not (empty? words)
+            (update q :where concat (map sql-like-pract words))
+            q)]
+
+    (http/json-resp (as-bundle (db/query (db/to-sql q))))))
 
 ;;
 ;; Organizations
 ;;
 
 (def ^:private
-  search-expression-org
+  sql-like-clause-org
   (gen-search-expression
    [[:n :name]
     [:s :address 0 :state]
     [:c :address 0 :city]]))
 
+(defn sql-like-org [term]
+  (db/raw (format "\n%s ilike '%%%s%%'" sql-like-clause-org term)))
+
+(def ^:private
+  query-organization
+  {:select [:resource]
+   :from [:organizations]
+   :where [:and [:not :deleted]]})
+
 (defn get-organization
   "Returns a single organization entity by its id."
   [request]
   (let [npi (-> request :route-params :npi)
-        q {:select [#sql/raw "resource::text"]
-           :from [:organizations]
-           :where [:and [:not :deleted] [:= :id npi]]}]
-    (if-let [row (first (db/query (db/to-sql q)))]
-      (http/set-json (http/http-resp (:resource row)))
+        q (update query-organization :where conj [:= :id npi])]
+    (if-let [model (first (db/query (db/to-sql q)))]
+      (http/json-resp (:resource model))
       (http/err-resp 404 "Organization with id = %s not found." npi))))
 
 (defn get-organizations-by-ids
   "Returns multiple organization entities by their ids."
   [request]
   (if-let [ids (some->> request :params :ids parse-ids)]
-    (let [q {:select [#sql/raw "resource::text"]
-             :from [:organizations]
-             :where [:and [:not :deleted] [:in :id ids]]}
-          orgs (db/query (db/to-sql q))]
-      (http/set-json (http/http-resp (as-bundle orgs))))
+    (let [q (update query-organization :where conj [:in :id ids])
+          models (db/query (db/to-sql q))]
+      (http/json-resp (as-bundle models)))
     (http/err-resp 400 "Parameter ids is malformed.")))
 
 (defn get-organizations
   "Returns multiple organization entities by a query term."
   [request]
   (let [words (some-> request :params :q parse-words)
-        limit (-> request :params :_count (or 100))
+        limit (-> request :params :_count (or sql-limit))
 
-        get-raw #(db/raw (format "\n%s ilike '%%%s%%'" search-expression-org %))
+        q (assoc query-organization :limit limit)
 
-        q {:select [#sql/raw "resource::text"]
-           :from [:organizations]
-           :where [:and [:not :deleted]]
-           :limit limit}
+        q (if-not (empty? words)
+            (update q :where concat (map sql-like-org words))
+            q)]
 
-        q (if (empty? words)
-            q
-            (update q :where concat (map get-raw words)))
-
-        orgs (db/query (db/to-sql q))]
-
-    (http/set-json (http/http-resp (as-bundle orgs)))))
+    (http/json-resp (as-bundle (db/query (db/to-sql q))))))
