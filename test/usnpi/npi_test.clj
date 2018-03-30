@@ -40,8 +40,9 @@
           (is (= (-> res read-json :name first :given first)
                  "YU"))))
 
-      (testing "aidbox"
+      (testing "Aidbox"
         (let [res (usnpi/index (mock/request :get url-pract-ok {:aidbox 1}))]
+          (is (= (:status res) 200))
           (is (= (-> res read-json :npiregistry.cms.hhs.gov)
                  {:provider_license_number_state_code "NV"}))))
 
@@ -95,7 +96,13 @@
 
         (let [res (usnpi/index (mock/request :get url {:q "g:David c:Roger"}))]
           (is (= (:status res) 200))
-          (is (-> res read-json :entry not-empty)))))))
+          (is (-> res read-json :entry not-empty))))
+
+      (testing "Aidbox"
+        (let [res (usnpi/index (mock/request :get url {:q "david" :aidbox true}))]
+          (is (= (:status res) 200))
+          (is (= (-> res read-json :entry first :npiregistry.cms.hhs.gov)
+                 {:provider_license_number_state_code "TX"})))))))
 
 (deftest test-org-api
   (testing "Single organization"
