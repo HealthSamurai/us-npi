@@ -28,8 +28,11 @@
 
 (defn- as-bundle
   "Composes a Bundle JSON response from a list of JSON strings."
-  [resources]
-  (format "{\"entry\":[%s]}" (str/join "," resources)))
+  [models]
+  (format "{\"entry\":[%s]}"
+          (str/join ","
+                    (for [model models]
+                      (format "{\"resource\": %s}" (:resource model))))))
 
 (defn- gen-search-expression
   [fields]
@@ -44,16 +47,16 @@
   [request]
   {:aidbox? (some-> request :params :aidbox not-empty boolean)})
 
-(defn process-resource
-  [resource & [opt]]
-  (cond-> resource
+(defn process-model
+  [model & [opt]]
+  (cond-> model
     (:aidbox? opt)
-    (-> (json/parse-string true) ->aidbox json/generate-string)))
+    (update :resource #(-> % (json/parse-string true) ->aidbox json/generate-string))))
 
-(defn process-resources
-  [resources & [opt]]
-  (for [resource resources]
-    (process-resource resource opt)))
+(defn process-models
+  [models & [opt]]
+  (for [model models]
+    (process-model model opt)))
 
 ;;
 ;; Practitioner
@@ -94,17 +97,17 @@
   (let [npi (-> request :route-params :npi)
         q (update query-practitioner :where conj [:= :id npi])
         opt (request-opt request)]
-    (if-let [resource (:resource (first (db/query (db/to-sql q))))]
-      (http/json-str-resp (process-resource resource opt))
+    (if-let [model (first (db/query (db/to-sql q)))]
+      (http/json-str-resp (:resource (process-model model opt)))
       (http/err-resp 404 "Practitioner with id = %s not found." npi))))
 
 (defn get-practitioners-by-ids
   [request]
   (if-let [ids (some->> request :params :ids parse-ids)]
     (let [q (update query-practitioner :where conj [:in :id ids])
-          resources (map :resource (db/query (db/to-sql q)))
+          models (db/query (db/to-sql q))
           opt (request-opt request)]
-      (http/json-str-resp (as-bundle (process-resources resources opt))))
+      (http/json-str-resp (as-bundle (process-models models opt))))
     (http/err-resp 400 "Parameter ids is malformed.")))
 
 (defn get-practitioners
@@ -119,9 +122,9 @@
             (update q :where concat (map sql-like-pract words))
             q)
 
-        resources (map :resource (db/query (db/to-sql q)))]
+        models (db/query (db/to-sql q))]
 
-    (http/json-str-resp (as-bundle (process-resources resources opt)))))
+    (http/json-str-resp (as-bundle (process-models models opt)))))
 
 ;;
 ;; Organizations
@@ -149,8 +152,8 @@
   (let [npi (-> request :route-params :npi)
         q (update query-organization :where conj [:= :id npi])
         opt (request-opt request)]
-    (if-let [resource (:resource (first (db/query (db/to-sql q))))]
-      (http/json-str-resp (process-resource resource opt))
+    (if-let [model (first (db/query (db/to-sql q)))]
+      (http/json-str-resp (:resource (process-model model opt)))
       (http/err-resp 404 "Organization with id = %s not found." npi))))
 
 (defn get-organizations-by-ids
@@ -158,9 +161,9 @@
   [request]
   (if-let [ids (some->> request :params :ids parse-ids)]
     (let [q (update query-organization :where conj [:in :id ids])
-          resources (map :resource (db/query (db/to-sql q)))
+          models (db/query (db/to-sql q))
           opt (request-opt request)]
-      (http/json-str-resp (as-bundle (process-resources resources opt))))
+      (http/json-str-resp (as-bundle (process-models models opt))))
     (http/err-resp 400 "Parameter ids is malformed.")))
 
 (defn get-organizations
@@ -176,6 +179,6 @@
             (update q :where concat (map sql-like-org words))
             q)
 
-        resources (map :resource (db/query (db/to-sql q)))]
+        models (db/query (db/to-sql q))]
 
-    (http/json-str-resp (as-bundle (process-resources resources opt)))))
+    (http/json-str-resp (as-bundle (process-models models opt)))))
