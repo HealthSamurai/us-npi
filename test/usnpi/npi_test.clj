@@ -40,6 +40,11 @@
           (is (= (-> res read-json :name first :given first)
                  "YU"))))
 
+      (testing "aidbox"
+        (let [res (usnpi/index (mock/request :get url-pract-ok {:aidbox 1}))]
+          (is (= (-> res read-json :npiregistry.cms.hhs.gov)
+                 {:provider_license_number_state_code "NV"}))))
+
       (testing "Missing"
         (let [res (usnpi/index (mock/request :get url-pract-err))]
           (is (= (:status res) 404))))
