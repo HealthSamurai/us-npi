@@ -1,7 +1,9 @@
 (ns usnpi.npi
   (:require [usnpi.db :as db]
             [clojure.string :as str]
-            [usnpi.http :as http]))
+            [usnpi.aidbox :refer [->aidbox]]
+            [usnpi.http :as http]
+            [cheshire.core :as json]))
 
 (def sql-limit 100)
 
@@ -26,8 +28,8 @@
 
 (defn- as-bundle
   "Composes a Bundle JSON response from a list of JSON strings."
-  [models]
-  {:entry (map :resource models)})
+  [resources]
+  (format "{\"entry\":[%s]}" (str/join "," resources)))
 
 (defn- gen-search-expression
   [fields]
@@ -37,6 +39,21 @@
           (format "'%s:' || coalesce((resource#>>'{%s}'), '')"
                   (to-str pr) (str/join "," (mapv to-str pth)))))
    (str/join " || ' ' || \n")))
+
+(defn request-opt
+  [request]
+  {:aidbox? (some-> request :params :aidbox not-empty boolean)})
+
+(defn process-resource
+  [resource & [opt]]
+  (cond-> resource
+    (:aidbox? opt)
+    (-> (json/parse-string true) ->aidbox json/generate-string)))
+
+(defn process-resources
+  [resources & [opt]]
+  (for [resource resources]
+    (process-resource resource opt)))
 
 ;;
 ;; Practitioner
@@ -67,42 +84,44 @@
   (format "CREATE INDEX IF NOT EXISTS pract_trgm_idx ON practitioner USING GIST ((\n%s\n) gist_trgm_ops);"
           sql-like-clause-pract))
 
-;; drop
-(def to-resource-expr "(resource || jsonb_build_object('id', id, 'resourceType', 'Practitioner'))")
-
 (def query-practitioner
-  {:select [:resource]
+  {:select [(db/raw "resource::text")]
    :from [:practitioner]
    :where [:and [:not :deleted]]})
 
 (defn get-practitioner
   [request]
   (let [npi (-> request :route-params :npi)
-        q (update query-practitioner :where conj [:= :id npi])]
-    (if-let [model (first (db/query (db/to-sql q)))]
-      (http/json-resp (:resource model))
+        q (update query-practitioner :where conj [:= :id npi])
+        opt (request-opt request)]
+    (if-let [resource (:resource (first (db/query (db/to-sql q))))]
+      (http/json-str-resp (process-resource resource opt))
       (http/err-resp 404 "Practitioner with id = %s not found." npi))))
 
 (defn get-practitioners-by-ids
   [request]
   (if-let [ids (some->> request :params :ids parse-ids)]
     (let [q (update query-practitioner :where conj [:in :id ids])
-          models (db/query (db/to-sql q))]
-      (http/json-resp (as-bundle models)))
+          resources (map :resource (db/query (db/to-sql q)))
+          opt (request-opt request)]
+      (http/json-str-resp (as-bundle (process-resources resources opt))))
     (http/err-resp 400 "Parameter ids is malformed.")))
 
-(defn get-pracitioners
+(defn get-practitioners
   [request]
   (let [words (some-> request :params :q parse-words)
         limit (-> request :params :_count (or sql-limit))
+        opt (request-opt request)
 
         q (assoc query-practitioner :limit limit)
 
         q (if-not (empty? words)
             (update q :where concat (map sql-like-pract words))
-            q)]
+            q)
 
-    (http/json-resp (as-bundle (db/query (db/to-sql q))))))
+        resources (map :resource (db/query (db/to-sql q)))]
+
+    (http/json-str-resp (as-bundle (process-resources resources opt)))))
 
 ;;
 ;; Organizations
@@ -120,7 +139,7 @@
 
 (def ^:private
   query-organization
-  {:select [:resource]
+  {:select [(db/raw "resource::text")]
    :from [:organizations]
    :where [:and [:not :deleted]]})
 
@@ -128,9 +147,10 @@
   "Returns a single organization entity by its id."
   [request]
   (let [npi (-> request :route-params :npi)
-        q (update query-organization :where conj [:= :id npi])]
-    (if-let [model (first (db/query (db/to-sql q)))]
-      (http/json-resp (:resource model))
+        q (update query-organization :where conj [:= :id npi])
+        opt (request-opt request)]
+    (if-let [resource (:resource (first (db/query (db/to-sql q))))]
+      (http/json-str-resp (process-resource resource opt))
       (http/err-resp 404 "Organization with id = %s not found." npi))))
 
 (defn get-organizations-by-ids
@@ -138,8 +158,9 @@
   [request]
   (if-let [ids (some->> request :params :ids parse-ids)]
     (let [q (update query-organization :where conj [:in :id ids])
-          models (db/query (db/to-sql q))]
-      (http/json-resp (as-bundle models)))
+          resources (map :resource (db/query (db/to-sql q)))
+          opt (request-opt request)]
+      (http/json-str-resp (as-bundle (process-resources resources opt))))
     (http/err-resp 400 "Parameter ids is malformed.")))
 
 (defn get-organizations
@@ -147,11 +168,14 @@
   [request]
   (let [words (some-> request :params :q parse-words)
         limit (-> request :params :_count (or sql-limit))
+        opt (request-opt request)
 
         q (assoc query-organization :limit limit)
 
         q (if-not (empty? words)
             (update q :where concat (map sql-like-org words))
-            q)]
+            q)
 
-    (http/json-resp (as-bundle (db/query (db/to-sql q))))))
+        resources (map :resource (db/query (db/to-sql q)))]
+
+    (http/json-str-resp (as-bundle (process-resources resources opt)))))

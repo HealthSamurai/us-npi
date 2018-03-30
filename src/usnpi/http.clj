@@ -36,3 +36,12 @@
 
   ([status tpl & args]
    (err-resp status (apply format tpl args))))
+
+(defn json-str-resp
+
+  ([body]
+   (json-str-resp 200 body))
+
+  ([status body]
+   (set-json
+    (http-resp status body))))

@@ -25,7 +25,7 @@
 (def routes-common
   {:GET (fn [req] {:status 200 :body (pr-str req)})
 
-   "practitioner" {:GET #'npi/get-pracitioners
+   "practitioner" {:GET #'npi/get-practitioners
                    "$batch" {:GET #'npi/get-practitioners-by-ids}
                    [:npi] {:GET #'npi/get-practitioner}}
 
