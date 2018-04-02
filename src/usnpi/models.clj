@@ -143,7 +143,7 @@
 (defn- npi-extension
   [child-nodes]
   [{:$type :extension
-    :url "npiregistry.cms.hhs.gov"
+    :url "http://npiregistry.cms.hhs.gov/npi"
     :extension (vec child-nodes)}])
 
 (def ^:private

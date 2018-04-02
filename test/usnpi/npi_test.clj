@@ -43,7 +43,7 @@
       (testing "Aidbox"
         (let [res (usnpi/index (mock/request :get url-pract-ok {:aidbox 1}))]
           (is (= (:status res) 200))
-          (is (= (-> res read-json :npiregistry.cms.hhs.gov)
+          (is (= (-> res read-json :npi)
                  {:provider_license_number_state_code "NV"}))))
 
       (testing "Missing"
@@ -101,7 +101,7 @@
       (testing "Aidbox"
         (let [res (usnpi/index (mock/request :get url {:q "david" :aidbox true}))]
           (is (= (:status res) 200))
-          (is (= (-> res read-json :entry first :resource :npiregistry.cms.hhs.gov)
+          (is (= (-> res read-json :entry first :resource :npi)
                  {:provider_license_number_state_code "TX"})))))))
 
 (deftest test-org-api
