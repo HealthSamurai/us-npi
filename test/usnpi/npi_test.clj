@@ -40,6 +40,10 @@
           (is (= (-> res read-json :name first :given first)
                  "YU"))))
 
+      (testing "Aidbox"
+        (let [res (usnpi/index (mock/request :get url-pract-ok {:aidbox 1}))]
+          (is (= (:status res) 200))))
+
       (testing "Missing"
         (let [res (usnpi/index (mock/request :get url-pract-err))]
           (is (= (:status res) 404))))
@@ -71,9 +75,13 @@
           (is (= (:status res) 200))
           (is (= (-> res read-json :entry count) 3)))
 
-        (let [res (usnpi/index (mock/request :get url ))]
+        (let [res (usnpi/index (mock/request :get url))]
           (is (= (:status res) 200))
           (is (> (-> res read-json :entry count) 3))))
+
+      (testing "Aidbox"
+        (let [res (usnpi/index (mock/request :get url {:aidbox 1}))]
+          (is (= (:status res) 200))))
 
       (testing "Query term"
         (let [res (usnpi/index (mock/request :get url {:q "david"}))]
