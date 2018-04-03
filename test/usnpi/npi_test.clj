@@ -40,12 +40,6 @@
           (is (= (-> res read-json :name first :given first)
                  "YU"))))
 
-      (testing "Aidbox"
-        (let [res (usnpi/index (mock/request :get url-pract-ok {:aidbox 1}))]
-          (is (= (:status res) 200))
-          (is (= (-> res read-json :npi)
-                 {:provider_license_number_state_code "NV"}))))
-
       (testing "Missing"
         (let [res (usnpi/index (mock/request :get url-pract-err))]
           (is (= (:status res) 404))))
@@ -96,13 +90,7 @@
 
         (let [res (usnpi/index (mock/request :get url {:q "g:David c:Roger"}))]
           (is (= (:status res) 200))
-          (is (-> res read-json :entry not-empty))))
-
-      (testing "Aidbox"
-        (let [res (usnpi/index (mock/request :get url {:q "david" :aidbox true}))]
-          (is (= (:status res) 200))
-          (is (= (-> res read-json :entry first :resource :npi)
-                 {:provider_license_number_state_code "TX"})))))))
+          (is (-> res read-json :entry not-empty)))))))
 
 (deftest test-org-api
   (testing "Single organization"
