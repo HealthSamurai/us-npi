@@ -6,10 +6,12 @@
             [usnpi.api :as api]
             [usnpi.db :as db]
             [usnpi.fhir :as fhir]
+            [usnpi.swagger :as swagger]
             [usnpi.env :as env :refer [env]]
             [clojure.tools.logging :as log]
             [org.httpkit.server :as server]
             [clojure.string :as str]
+            [ring.middleware.webjars :refer [wrap-webjars]]
             [route-map.core :as routing]))
 
 (defn form-decode [s]
@@ -24,6 +26,9 @@
 
 (def routes-common
   {:GET (fn [req] {:status 200 :body (pr-str req)})
+
+   "swagger" {:GET #'swagger/api-index
+              "schema" {:GET #'swagger/api-schema}}
 
    "practitioner" {:GET #'npi/get-practitioners
                    "$batch" {:GET #'npi/get-practitioners-by-ids}
@@ -83,8 +88,7 @@
     (let [params (when qs (form-decode qs))]
       (-> ((:match h) (assoc req :route-params (:params h) :params params))
           (update :headers (fn [x] (merge (or x {})
-                                    {"Content-Type" "application/json"
-                                     "Access-Control-Allow-Origin" (str (get-in req [:headers "origin"]))
+                                    {"Access-Control-Allow-Origin" (str (get-in req [:headers "origin"]))
                                      "Access-Control-Allow-Credentials" "true"
                                      "Access-Control-Expose-Headers" "Location, Content-Location, Category, Content-Type, X-total-count"})))))
 
@@ -94,7 +98,7 @@
 (defn start-server [& [{:keys [port] :as opt}]]
   (let [port (or port 8080)]
     (log/infof "Starting server on port %s..." port)
-    (server/run-server (cors-mw #'index) {:port port})))
+    (server/run-server (-> #'index cors-mw wrap-webjars) {:port port})))
 
 (defn init [& [opt]]
   (env/init)
