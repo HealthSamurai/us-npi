@@ -22,7 +22,10 @@
                  [hickory "0.7.1"]
                  [honeysql "0.9.1"]
                  [org.apache.commons/commons-compress "1.5"]
-                 [route-map "0.0.6"]]
+                 [route-map "0.0.6"]
+
+                 [ring-webjars "0.2.0"]
+                 [org.webjars/swagger-ui "3.13.0"]]
 
   :plugins [[migratus-lein "0.5.7"]]
 
