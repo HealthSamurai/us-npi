@@ -2,7 +2,7 @@
   (:require [clojure.test :refer :all]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [usnpi.util-test :refer [read-json]]
+            [usnpi.util-test :refer [read-body]]
             [ring.mock.request :as mock]
             [usnpi.db :as db]
             [usnpi.core :as usnpi]
@@ -37,7 +37,7 @@
       (testing "OK"
         (let [res (usnpi/index (mock/request :get url-pract-ok))]
           (is (= (:status res) 200))
-          (is (= (-> res read-json :name first :given first)
+          (is (= (-> res read-body :name first :given first)
                  "YU"))))
 
       (testing "Aidbox"
@@ -65,7 +65,7 @@
       (testing "Ignores deleted and missing"
         (let [res (usnpi/index (mock/request :get url {:ids ids}))]
           (is (= (:status res) 200))
-          (is (= (-> res read-json :entry count) 1))))))
+          (is (= (-> res read-body :entry count) 1))))))
 
   (testing "Practitioner search"
     (let [url "/practitioner"]
@@ -73,11 +73,11 @@
       (testing "Test limit"
         (let [res (usnpi/index (mock/request :get url {:_count 3}))]
           (is (= (:status res) 200))
-          (is (= (-> res read-json :entry count) 3)))
+          (is (= (-> res read-body :entry count) 3)))
 
         (let [res (usnpi/index (mock/request :get url))]
           (is (= (:status res) 200))
-          (is (> (-> res read-json :entry count) 3))))
+          (is (> (-> res read-body :entry count) 3))))
 
       (testing "Aidbox"
         (let [res (usnpi/index (mock/request :get url {:aidbox 1}))]
@@ -86,19 +86,19 @@
       (testing "Query term"
         (let [res (usnpi/index (mock/request :get url {:q "david"}))]
           (is (= (:status res) 200))
-          (is (-> res read-json :entry not-empty)))
+          (is (-> res read-body :entry not-empty)))
 
         (let [res (usnpi/index (mock/request :get url {:q "g:david"}))]
           (is (= (:status res) 200))
-          (is (-> res read-json :entry not-empty)))
+          (is (-> res read-body :entry not-empty)))
 
         (let [res (usnpi/index (mock/request :get url {:q "c:new"}))]
           (is (= (:status res) 200))
-          (is (-> res read-json :entry not-empty)))
+          (is (-> res read-body :entry not-empty)))
 
         (let [res (usnpi/index (mock/request :get url {:q "g:David c:Roger"}))]
           (is (= (:status res) 200))
-          (is (-> res read-json :entry not-empty)))))))
+          (is (-> res read-body :entry not-empty)))))))
 
 (deftest test-org-api
   (testing "Single organization"
@@ -109,7 +109,7 @@
       (testing "OK"
         (let [res (usnpi/index (mock/request :get url-ok))]
           (is (= (:status res) 200))
-          (is (= (-> res read-json :address first :city) "SAINT LOUIS"))))
+          (is (= (-> res read-body :address first :city) "SAINT LOUIS"))))
 
       (testing "Missing"
         (let [res (usnpi/index (mock/request :get url-err))]
@@ -132,7 +132,7 @@
       (testing "OK"
         (let [res (usnpi/index (mock/request :get url {:ids ids}))]
           (is (= (:status res) 200))
-          (is (= (-> res read-json :entry count) 1))))
+          (is (= (-> res read-body :entry count) 1))))
 
       (testing "no ids"
         (let [res (usnpi/index (mock/request :get url ))]
@@ -144,14 +144,14 @@
       (testing "OK"
         (let [res (usnpi/index (mock/request :get url {:q "physical"}))]
           (is (= (:status res) 200))
-          (is (= (-> res read-json :entry count) 2))))
+          (is (= (-> res read-body :entry count) 2))))
 
       (testing "prefixes"
         (let [res (usnpi/index (mock/request :get url {:q "n:SCHUS c:JEFF"}))]
           (is (= (:status res) 200))
-          (is (= (-> res read-json :entry count) 1))))
+          (is (= (-> res read-body :entry count) 1))))
 
       (testing "Limit"
         (let [res (usnpi/index (mock/request :get url {:_count 3}))]
           (is (= (:status res) 200))
-          (is (= (-> res read-json :entry count) 3)))))))
+          (is (= (-> res read-body :entry count) 3)))))))
