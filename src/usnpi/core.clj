@@ -6,6 +6,7 @@
             [usnpi.api :as api]
             [usnpi.db :as db]
             [usnpi.fhir :as fhir]
+            [usnpi.http :as http]
             [usnpi.swagger :as swagger]
             [usnpi.env :as env :refer [env]]
             [clojure.tools.logging :as log]
@@ -85,20 +86,20 @@
   [{uri :uri qs :query-string :as req}]
   (log-request req)
   (if-let [h (routing/match [:get (str/lower-case uri)] routes)]
-    (let [params (when qs (form-decode qs))]
-      (-> ((:match h) (assoc req :route-params (:params h) :params params))
-          (update :headers (fn [x] (merge (or x {})
-                                    {"Access-Control-Allow-Origin" (str (get-in req [:headers "origin"]))
-                                     "Access-Control-Allow-Credentials" "true"
-                                     "Access-Control-Expose-Headers" "Location, Content-Location, Category, Content-Type, X-total-count"})))))
+    (let [params (merge (when qs (form-decode qs)) (:params h))]
+      ((:match h) (assoc req :params params)))
+    (http/http-resp 404 (format "URL %s not found." uri))))
 
-    {:status 404
-     :body (str "Url " (str/lower-case uri) " not found " (keys routes))}))
+(def handler
+  (-> #'index
+      cors-mw
+      http/wrap-encoding
+      wrap-webjars))
 
 (defn start-server [& [{:keys [port] :as opt}]]
   (let [port (or port 8080)]
     (log/infof "Starting server on port %s..." port)
-    (server/run-server (-> #'index cors-mw wrap-webjars) {:port port})))
+    (server/run-server handler {:port port})))
 
 (defn init [& [opt]]
   (env/init)
