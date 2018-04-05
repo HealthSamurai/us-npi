@@ -290,6 +290,89 @@
      :enum ["male" "female" "other" "unknown"]
      :type "string"}}
    :required ["resourceType"]}
+  :Organization
+  {:description
+   "A formally or informally recognized grouping of people or organizations formed for the purpose of achieving some form of collective action.  Includes companies, institutions, corporations, departments, community groups, healthcare practice groups, etc.",
+   :properties
+   {:address
+    {:description
+     "An address for the organization."
+     :type "array"
+     :items
+     {:$ref "#/definitions/Address"}}
+    :name
+    {:description
+     "A name associated with the organization."
+     :type "string"}
+    :type
+    {:description
+     "The kind(s) of organization that this is."
+     :type "array"
+     :items
+     {:$ref "#/definitions/CodeableConcept"}}
+    :resourceType
+    {:description
+     "This is a Organization resource"
+     :type "string"
+     :enum ["Organization"]}
+    :alias
+    {:description
+     "A list of alternate names that the organization is known as or was known as in the past."
+     :type "array"
+     :items {:type "string"}}
+    :active
+    {:description
+     "Whether the organization's record is still in active use."
+     :type "boolean"}
+    :identifier
+    {:description
+     "Identifier for the organization that is used to identify the organization across multiple disparate systems."
+     :type "array"
+     :items {:$ref "#/definitions/Identifier"}}
+    :telecom
+    {:description
+     "A contact detail for the organization."
+     :type "array"
+     :items
+     {:$ref "#/definitions/ContactPoint"}}
+    :partOf
+    {:description
+     "The organization of which this organization forms a part."
+     :$ref "#/definitions/Reference"}
+    :endpoint
+    {:description
+     "Technical endpoints providing access to services operated for the organization."
+     :type "array"
+     :items {:$ref "#/definitions/Reference"}}
+    :contact
+    {:description
+     "Contact for the organization for a certain purpose."
+     :type "array"
+     :items
+     {:$ref "#/definitions/Organization_Contact"}}}
+   :required ["resourceType"]}
+  :Organization_Contact
+  {:description
+   "A formally or informally recognized grouping of people or organizations formed for the purpose of achieving some form of collective action.  Includes companies, institutions, corporations, departments, community groups, healthcare practice groups, etc.",
+   :properties
+   {:purpose
+    {:description
+     "Indicates a purpose for which the contact can be reached."
+     :$ref "#/definitions/CodeableConcept"}
+    :name
+    {:description
+     "A name associated with the contact."
+     :$ref "#/definitions/HumanName"}
+    :telecom
+    {:description
+     "A contact detail (e.g. a telephone number or an email address) by which the party may be contacted."
+     :type "array"
+     :items
+     {:$ref "#/definitions/ContactPoint"}}
+    :address
+    {:description
+     "Visiting or postal addresses for the contact."
+     :$ref "#/definitions/Address"}}}
   :BundlePractitioner
   {:description
    "A container for a collection of practitioners."
@@ -299,6 +382,16 @@
      "A set of practitioners."
      :type "array"
      :items {:$ref "#/definitions/Practitioner"}}}
+   :required ["entry"]}
+  :BundleOrganization
+  {:description
+   "A container for a collection of organizations."
+   :properties
+   {:entry
+    {:description
+     "A set of organizations."
+     :type "array"
+     :items {:$ref "#/definitions/Organization"}}}
    :required ["entry"]}
   :ErrorResponse
   {:description
@@ -313,7 +406,7 @@
  {"/practitioner"
   {:get {:tags [:practitioner]
          :summary "Returns a list of practitioners."
-         :description "Returns either a list of random practitioners or, if a query term was passed, a search result."
+         :description "Returns either a list of practitioners or, if a query term was passed, a search result."
          :parameters [{:name :q
                        :type :string
                        :in :query
@@ -356,9 +449,53 @@
          :produces ["application/json" "application/yaml"]
          :responses {200 {:description "Successful operation"
                           :schema {:$ref "#/definitions/Practitioner"}}
+                     400 {:description "Input parameters are malformed."
+                          :schema {:$ref "#/definitions/ErrorResponse"}}}}}
+  "/organization"
+  {:get {:tags [:organization]
+         :summary "Returns a list of organizations."
+         :description "Returns either a list of organizations or, if a query term was passed, a search result."
+         :parameters [{:name :q
+                       :type :string
+                       :in :query
+                       :required false
+                       :description "A query term to search across multiple fields including name and address."}
+                      {:name :_count
+                       :type :number
+                       :format :int
+                       :in :query
+                       :required false
+                       :description "How many records to return. Default is 100."}]
+         :produces ["application/json" "application/yaml"]
+         :responses {200 {:description "Successful operation"
+                          :schema {:$ref "#/definitions/BundleOrganization"}}
+                     400 {:description "Input parameters are malformed."
+                          :schema {:$ref "#/definitions/ErrorResponse"}}}}}
+  "/organization/{Id}"
+  {:get {:tags [:organization]
+         :summary "Returns a single organization by its Id."
+         :description "For a given NPI code, returns a single organization entity or an error message."
+         :parameters [{:name :Id
+                       :type :number
+                       :in :path
+                       :required true
+                       :description "An NPI code, e.g. 1336142389."}]
+         :produces ["application/json" "application/yaml"]
+         :responses {200 {:description "Successful operation"
+                          :schema {:$ref "#/definitions/Organization"}}
                      404 {:description "No practitioner with such Id was found."
                           :schema {:$ref "#/definitions/ErrorResponse"}}}}}
-
-
-
-  }}
+  "/organization/$batch"
+  {:get {:tags [:organization]
+         :summary "Returns multiple organizations by their Ids."
+         :description "For a given set of codes, returns multiple organization at once."
+         :parameters [{:name :ids
+                       :type :string
+                       :in :query
+                       :required true
+                       :description "A set of Ids separated with comma, e.g. 1336142389,1346243375."}]
+         :produces ["application/json" "application/yaml"]
+         :responses {200 {:description "Successful operation"
+                          :schema {:$ref "#/definitions/BundleOrganization"}}
+                     400 {:description "Input parameters are malformed."
+                          :schema {:$ref "#/definitions/ErrorResponse"}}}}}}}
