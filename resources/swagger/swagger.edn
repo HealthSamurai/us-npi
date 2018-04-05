@@ -25,86 +25,46 @@
       "pager"
       "url"
       "sms"
-      "other"],
-     :type "string"},
+      "other"]
+     :type "string"}
     :use
     {:description
      "Identifies the purpose for the contact point.",
-     :enum ["home" "work" "temp" "old" "mobile"],
-     :type "string"},
+     :enum ["home" "work" "temp" "old" "mobile"]
+     :type "string"}
     :value
     {:description
      "The actual contact point details, in a form that is meaningful to the designated communication system (i.e. phone number or email address).",
-     :type "string"},
+     :type "string"}
     :rank
     {:description
      "Specifies a preferred order in which to use a set of contacts. Contacts are ranked with lower values coming before higher values.",
      :type "number",
-     :pattern "[1-9][0-9]*"},
+     :pattern "[1-9][0-9]*"}
     :period
     {:description
      "Time period when the contact point was/is in use.",
-     :$ref "#/definitions/Period"},}}
-  :Attachment
-  {:description
-   "For referring to data content defined in other formats.",
-   :properties
-   {:creation
-    {:description "The date that the attachment was first created.",
-     :type "string",
-     :pattern
-     "-?[0-9]{4}(-(0[1-9]|1[0-2])(-(0[0-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]+)?(Z|(\\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?"},
-    :hash
-    {:description
-     "The calculated hash of the data using SHA-1. Represented using base64.",
-     :type "string"},
-    :size
-    {:description
-     "The number of bytes of data that make up this attachment (before base64 encoding, if that is done).",
-     :type "number",
-     :pattern "[0]|([1-9][0-9]*)"},
-    :title
-    {:description
-     "A label or set of text to display in place of the data.",
-     :type "string"},
-    :language
-    {:description
-     "The human language of the content. The value can be any valid value according to BCP 47.",
-     :type "string",
-     :pattern "[^\\s]+([\\s]?[^\\s]+)*"},
-    :url
-    {:description
-     "An alternative location where the data can be accessed.",
-     :type "string"},
-    :contentType
-    {:description
-     "Identifies the type of the data in the attachment and allows a method to be chosen to interpret or render the data. Includes mime type parameters such as charset where appropriate.",
-     :type "string",
-     :pattern "[^\\s]+([\\s]?[^\\s]+)*"},
-    :data
-    {:description
-     "The actual data of the attachment - a sequence of bytes. In XML, represented using base64.",
-     :type "string"}}}
+     :$ref "#/definitions/Period"}}}
   :Coding
   {:description "A reference to a code defined by a terminology system.",
    :properties
    {:userSelected
     {:description
      "Indicates that this coding was chosen by a user directly - i.e. off a pick list of available items (codes or displays).",
-     :type "boolean"},
+     :type "boolean"}
     :system
     {:description
      "The identification of the code system that defines the meaning of the symbol in the code.",
-     :type "string"},
+     :type "string"}
     :code
     {:description
      "A symbol in syntax defined by the system. The symbol may be a predefined code or an expression in a syntax defined by the coding system (e.g. post-coordination).",
      :type "string",
-     :pattern "[^\\s]+([\\s]?[^\\s]+)*"},
+     :pattern "[^\\s]+([\\s]?[^\\s]+)*"}
     :display
     {:description
      "A representation of the meaning of the code in the system, following the rules of the system.",
-     :type "string"},
+     :type "string"}
     :version
     {:description
      "The version of the code system which was used when choosing this code. Note that a well-maintained code system does not need the version reported, because the meaning of codes is consistent across versions. However this cannot consistently be assured. and when the meaning is not guaranteed to be consistent, the version SHOULD be exchanged.",
@@ -117,7 +77,7 @@
     {:description
      "A reference to a code defined by a terminology system.",
      :type "array",
-     :items {:$ref "#/definitions/Coding"}},
+     :items {:$ref "#/definitions/Coding"}}
     :text
     {:description
      "A human language representation of the concept as seen/selected/uttered by the user who entered the data and/or which represents the intended meaning of the user.",
@@ -130,27 +90,27 @@
     {:description
      "Part of the name that is acquired as a title due to academic, legal, employment or nobility status, etc. and that appears at the end of the name.",
      :type "array",
-     :items {:type "string"}},
+     :items {:type "string"}}
     :given
-    {:description "Given name.", :type "array", :items {:type "string"}},
+    {:description "Given name.", :type "array", :items {:type "string"}}
     :family
     {:description
      "The part of a name that links to the genealogy. In some cultures (e.g. Eritrea) the family name of a son is the first name of his father.",
-     :type "string"},
+     :type "string"}
     :use
     {:description "Identifies the purpose for this name.",
      :enum
-     ["usual" "official" "temp" "nickname" "anonymous" "old" "maiden"],
-     :type "string"},
+     ["usual" "official" "temp" "nickname" "anonymous" "old" "maiden"]
+     :type "string"}
     :prefix
     {:description
      "Part of the name that is acquired as a title due to academic, legal, employment or nobility status, etc. and that appears at the start of the name.",
      :type "array",
-     :items {:type "string"}},
+     :items {:type "string"}}
     :period
     {:description
      "Indicates the period of time when this name was valid for the named person.",
-     :$ref "#/definitions/Period"},
+     :$ref "#/definitions/Period"}
     :text
     {:description "A full text representation of the name.",
      :type "string"}}}
@@ -160,11 +120,11 @@
    {:reference
     {:description
      "A reference to a location at which the other resource is found. The reference may be a relative reference, in which case it is relative to the service base URL, or an absolute URL that resolves to the location where the resource is found. The reference may be version specific or not. If the reference is not to a FHIR RESTful server, then it should be assumed to be version specific. Internal fragment references (start with '#') refer to contained resources.",
-     :type "string"},
+     :type "string"}
     :identifier
     {:description
      "An identifier for the other resource. This is used when there is no way to reference the other resource directly, either because the entity is not available through a FHIR server, or because there is no way for the author of the resource to convert a known identifier to an actual location. There is no requirement that a Reference.identifier point to something that is actually exposed as a FHIR instance, but it SHALL point to a business concept that would be expected to be exposed as a FHIR instance, and that instance would need to be of a FHIR resource type allowed by the reference.",
-     :$ref "#/definitions/Identifier"},
+     :$ref "#/definitions/Identifier"}
     :display
     {:description
      "Plain text narrative that identifies the resource in addition to the resource reference.",
@@ -175,23 +135,23 @@
    :properties
    {:assigner
     {:description "Organization that issued/manages the identifier.",
-     :$ref "#/definitions/Reference"},
+     :$ref "#/definitions/Reference"}
     :system
     {:description
      "Establishes the namespace for the value - that is, a URL that describes a set values that are unique.",
-     :type "string"},
+     :type "string"}
     :use
     {:description "The purpose of this identifier.",
-     :enum ["usual" "official" "temp" "secondary"],
-     :type "string"},
+     :enum ["usual" "official" "temp" "secondary"]
+     :type "string"}
     :value
     {:description
      "The portion of the identifier typically relevant to the user and which is unique within the context of the system.",
-     :type "string"},
+     :type "string"}
     :type
     {:description
      "A coded type for the identifier that can be used to determine which identifier to use for a specific purpose.",
-     :$ref "#/definitions/CodeableConcept"},
+     :$ref "#/definitions/CodeableConcept"}
     :period
     {:description
      "Time period during which identifier is/was valid for use.",
@@ -204,53 +164,53 @@
     {:description "The start of the period. The boundary is inclusive.",
      :type "string",
      :pattern
-     "-?[0-9]{4}(-(0[1-9]|1[0-2])(-(0[0-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]+)?(Z|(\\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?"},
+     "-?[0-9]{4}(-(0[1-9]|1[0-2])(-(0[0-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]+)?(Z|(\\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?"}
     :end
     {:description
      "The end of the period. If the end of the period is missing, it means that the period is ongoing. The start may be in the past, and the end date in the future, which means that period is expected/planned to end at that time.",
      :type "string",
      :pattern
-     "-?[0-9]{4}(-(0[1-9]|1[0-2])(-(0[0-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]+)?(Z|(\\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?"},}}
+     "-?[0-9]{4}(-(0[1-9]|1[0-2])(-(0[0-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]+)?(Z|(\\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?"}}}
   :Address
   {:description
    "An address expressed using postal conventions (as opposed to GPS or other location definition formats).  This data type may be used to convey addresses for use in delivering mail as well as for visiting locations which might not be valid for mail delivery.  There are a variety of postal address formats defined around the world.",
    :properties
    {:use
     {:description "The purpose of this address.",
-     :enum ["home" "work" "temp" "old"],
-     :type "string"},
+     :enum ["home" "work" "temp" "old"]
+     :type "string"}
     :city
     {:description
      "The name of the city, town, village or other community or delivery center.",
-     :type "string"},
+     :type "string"}
     :type
     {:description
      "Distinguishes between physical addresses (those you can visit) and mailing addresses (e.g. PO Boxes and care-of addresses). Most addresses are both.",
-     :enum ["postal" "physical" "both"],
-     :type "string"},
+     :enum ["postal" "physical" "both"]
+     :type "string"}
     :state
     {:description
      "Sub-unit of a country with limited sovereignty in a federally organized country. A code may be used if codes are in common use (i.e. US 2 letter state codes).",
-     :type "string"},
+     :type "string"}
     :line
     {:description
      "This component contains the house number, apartment number, street name, street direction,  P.O. Box number, delivery hints, and similar address information.",
      :type "array",
-     :items {:type "string"}},
+     :items {:type "string"}}
     :postalCode
     {:description
      "A postal code designating a region defined by the postal service.",
-     :type "string"},
+     :type "string"}
     :period
     {:description "Time period when address was/is in use.",
-     :$ref "#/definitions/Period"},
+     :$ref "#/definitions/Period"}
     :country
     {:description
      "Country - a nation as commonly understood or generally accepted.",
-     :type "string"},
+     :type "string"}
     :district
     {:description "The name of the administrative area (county).",
-     :type "string"},
+     :type "string"}
     :text
     {:description "A full text representation of the address.",
      :type "string"}}}
@@ -263,17 +223,17 @@
      "An identifier that applies to this person's qualification in this role.",
      :type "array",
      :items
-     {:$ref "#/definitions/Identifier"}},
+     {:$ref "#/definitions/Identifier"}}
     :code
     {:description "Coded representation of the qualification.",
-     :$ref "#/definitions/CodeableConcept"},
+     :$ref "#/definitions/CodeableConcept"}
     :period
     {:description "Period during which the qualification is valid.",
-     :$ref "#/definitions/Period"},
+     :$ref "#/definitions/Period"}
     :issuer
     {:description
      "Organization that regulates and issues the qualification.",
-     :$ref "#/definitions/Reference"}},
+     :$ref "#/definitions/Reference"}}
    :required ["code"]}
   :Practitioner
   {:description
@@ -283,58 +243,63 @@
     {:description
      "Address(es) of the practitioner that are not role specific (typically home address). \rWork addresses are not typically entered in this property as they are usually role dependent.",
      :type "array",
-     :items {:$ref "#/definitions/Address"}},
+     :items {:$ref "#/definitions/Address"}}
     :name
     {:description "The name(s) associated with the practitioner.",
      :type "array",
-     :items {:$ref "#/definitions/HumanName"}},
+     :items {:$ref "#/definitions/HumanName"}}
     :birthDate
     {:description "The date of birth for the practitioner.",
      :type "string",
      :pattern
-     "-?[0-9]{4}(-(0[1-9]|1[0-2])(-(0[0-9]|[1-2][0-9]|3[0-1]))?)?"},
+     "-?[0-9]{4}(-(0[1-9]|1[0-2])(-(0[0-9]|[1-2][0-9]|3[0-1]))?)?"}
     :resourceType
     {:description "This is a Practitioner resource",
      :type "string",
-     :enum ["Practitioner"]},
-    :photo
-    {:description "Image of the person.",
-     :type "array",
-     :items
-     {:$ref "#/definitions/Attachment"}},
+     :enum ["Practitioner"]}
     :active
     {:description
      "Whether this practitioner's record is in active use.",
-     :type "boolean"},
+     :type "boolean"}
     :communication
     {:description
      "A language the practitioner is able to use in patient communication.",
      :type "array",
      :items
-     {:$ref "#/definitions/CodeableConcept"}},
+     {:$ref "#/definitions/CodeableConcept"}}
     :identifier
     {:description
      "An identifier that applies to this person in this role.",
      :type "array",
      :items
-     {:$ref "#/definitions/Identifier"}},
+     {:$ref "#/definitions/Identifier"}}
     :qualification
     {:description
      "Qualifications obtained by training and certification.",
      :type "array",
-     :items {:$ref "#/definitions/Practitioner_Qualification"}},
+     :items {:$ref "#/definitions/Practitioner_Qualification"}}
     :telecom
     {:description
      "A contact detail for the practitioner, e.g. a telephone number or an email address.",
      :type "array",
      :items
-     {:$ref "#/definitions/ContactPoint"}},
+     {:$ref "#/definitions/ContactPoint"}}
     :gender
     {:description
      "Administrative Gender - the gender that the person is considered to have for administration and record keeping purposes.",
-     :enum ["male" "female" "other" "unknown"],
-     :type "string"}},
-   :required ["resourceType"]}}
+     :enum ["male" "female" "other" "unknown"]
+     :type "string"}}
+   :required ["resourceType"]}
+  :BundlePractitioner
+  {:description
+   "A container for a collection of practitioners.",
+   :properties
+   {:entry
+    {:description
+     "A set of practitioners.",
+     :type "array",
+     :items {:$ref "#/definitions/Practitioner"}}}
+   :required ["entry"]}}
  :paths
  {"/practitioner"
   {:get {:tags [:practitioner]
@@ -353,5 +318,5 @@
                        :description "How many records to return. Default is 100."}]
          :produces ["application/json", "application/yaml"]
          :responses {200 {:description "Successful operation"
-                          :schema {:$ref "#/definitions/Practitioner"}}
+                          :schema {:$ref "#/definitions/BundlePractitioner"}}
                      400 {:description "Input parameters are malformed."}}}}}}
