@@ -12,11 +12,10 @@
             [clojure.tools.logging :as log]
             [org.httpkit.server :as server]
             [clojure.string :as str]
+            [ring.middleware.params :refer [wrap-params]]
+            [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.webjars :refer [wrap-webjars]]
             [route-map.core :as routing]))
-
-(defn form-decode [s]
-  (clojure.walk/keywordize-keys (ring.util.codec/form-decode s)))
 
 (def routes-ops
   "A set of routes that cause sensible changes. For dev or non-public usage."
@@ -86,14 +85,15 @@
   [{uri :uri qs :query-string :as req}]
   (log-request req)
   (if-let [h (routing/match [:get (str/lower-case uri)] routes)]
-    (let [params (merge (when qs (form-decode qs)) (:params h))]
-      ((:match h) (assoc req :params params)))
+    ((:match h) (update req :params merge (:params h)))
     (http/http-resp 404 (format "URL %s not found." uri))))
 
 (def app
   (-> #'index
       cors-mw
       http/wrap-encoding
+      wrap-keyword-params
+      wrap-params
       wrap-webjars))
 
 (defn start-server [& [{:keys [port] :as opt}]]
