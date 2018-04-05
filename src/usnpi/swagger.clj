@@ -1,8 +1,6 @@
 (ns usnpi.swagger
   (:require [clojure.java.io :as io]
-            [cheshire.core :as json]
-            [usnpi.http :refer [json-resp]]
-))
+            [usnpi.http :refer [json-resp]]))
 
 (defn api-index [request]
   {:status 200
