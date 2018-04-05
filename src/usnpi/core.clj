@@ -6,16 +6,16 @@
             [usnpi.api :as api]
             [usnpi.db :as db]
             [usnpi.fhir :as fhir]
+            [usnpi.http :as http]
             [usnpi.swagger :as swagger]
             [usnpi.env :as env :refer [env]]
             [clojure.tools.logging :as log]
             [org.httpkit.server :as server]
             [clojure.string :as str]
+            [ring.middleware.params :refer [wrap-params]]
+            [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.webjars :refer [wrap-webjars]]
             [route-map.core :as routing]))
-
-(defn form-decode [s]
-  (clojure.walk/keywordize-keys (ring.util.codec/form-decode s)))
 
 (def routes-ops
   "A set of routes that cause sensible changes. For dev or non-public usage."
@@ -85,20 +85,21 @@
   [{uri :uri qs :query-string :as req}]
   (log-request req)
   (if-let [h (routing/match [:get (str/lower-case uri)] routes)]
-    (let [params (when qs (form-decode qs))]
-      (-> ((:match h) (assoc req :route-params (:params h) :params params))
-          (update :headers (fn [x] (merge (or x {})
-                                    {"Access-Control-Allow-Origin" (str (get-in req [:headers "origin"]))
-                                     "Access-Control-Allow-Credentials" "true"
-                                     "Access-Control-Expose-Headers" "Location, Content-Location, Category, Content-Type, X-total-count"})))))
+    ((:match h) (update req :params merge (:params h)))
+    (http/http-resp 404 (format "URL %s not found." uri))))
 
-    {:status 404
-     :body (str "Url " (str/lower-case uri) " not found " (keys routes))}))
+(def app
+  (-> #'index
+      cors-mw
+      http/wrap-encoding
+      wrap-keyword-params
+      wrap-params
+      wrap-webjars))
 
 (defn start-server [& [{:keys [port] :as opt}]]
   (let [port (or port 8080)]
     (log/infof "Starting server on port %s..." port)
-    (server/run-server (-> #'index cors-mw wrap-webjars) {:port port})))
+    (server/run-server app {:port port})))
 
 (defn init [& [opt]]
   (env/init)
