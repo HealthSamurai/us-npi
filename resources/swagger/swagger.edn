@@ -417,8 +417,13 @@
                        :format :int
                        :in :query
                        :required false
-                       :description "How many records to return. Default is 100."}]
-         :produces ["application/json" "application/yaml"]
+                       :description "How many records to return. Default is 100."}
+                      {:name :_format
+                       :schema {:type :string :enum [:json :yaml :edn]}
+                       :in :query
+                       :required false
+                       :description "The output format: JSON, YAML or EDN."}]
+         :produces ["application/json" "text/yaml" "text/edn"]
          :responses {200 {:description "Successful operation"
                           :schema {:$ref "#/definitions/BundlePractitioner"}}
                      400 {:description "Input parameters are malformed."
@@ -431,8 +436,13 @@
                        :type :number
                        :in :path
                        :required true
-                       :description "An NPI code, e.g. 1417052242."}]
-         :produces ["application/json" "application/yaml"]
+                       :description "An NPI code, e.g. 1417052242."}
+                      {:name :_format
+                       :schema {:type :string :enum [:json :yaml :edn]}
+                       :in :query
+                       :required false
+                       :description "The output format: JSON, YAML or EDN."}]
+         :produces ["application/json" "text/yaml" "text/edn"]
          :responses {200 {:description "Successful operation"
                           :schema {:$ref "#/definitions/Practitioner"}}
                      404 {:description "No practitioner with such Id was found."
@@ -445,8 +455,13 @@
                        :type :string
                        :in :query
                        :required true
-                       :description "A set of Ids separated with comma, e.g. 1417052242,1578566626."}]
-         :produces ["application/json" "application/yaml"]
+                       :description "A set of Ids separated with comma, e.g. 1417052242,1578566626."}
+                      {:name :_format
+                       :schema {:type :string :enum [:json :yaml :edn]}
+                       :in :query
+                       :required false
+                       :description "The output format: JSON, YAML or EDN."}]
+         :produces ["application/json" "text/yaml" "text/edn"]
          :responses {200 {:description "Successful operation"
                           :schema {:$ref "#/definitions/Practitioner"}}
                      400 {:description "Input parameters are malformed."
@@ -465,8 +480,13 @@
                        :format :int
                        :in :query
                        :required false
-                       :description "How many records to return. Default is 100."}]
-         :produces ["application/json" "application/yaml"]
+                       :description "How many records to return. Default is 100."}
+                      {:name :_format
+                       :schema {:type :string :enum [:json :yaml :edn]}
+                       :in :query
+                       :required false
+                       :description "The output format: JSON, YAML or EDN."}]
+         :produces ["application/json" "text/yaml" "text/edn"]
          :responses {200 {:description "Successful operation"
                           :schema {:$ref "#/definitions/BundleOrganization"}}
                      400 {:description "Input parameters are malformed."
@@ -479,8 +499,13 @@
                        :type :number
                        :in :path
                        :required true
-                       :description "An NPI code, e.g. 1336142389."}]
-         :produces ["application/json" "application/yaml"]
+                       :description "An NPI code, e.g. 1336142389."}
+                      {:name :_format
+                       :schema {:type :string :enum [:json :yaml :edn]}
+                       :in :query
+                       :required false
+                       :description "The output format: JSON, YAML or EDN."}]
+         :produces ["application/json" "text/yaml" "text/edn"]
          :responses {200 {:description "Successful operation"
                           :schema {:$ref "#/definitions/Organization"}}
                      404 {:description "No practitioner with such Id was found."
@@ -493,8 +518,13 @@
                        :type :string
                        :in :query
                        :required true
-                       :description "A set of Ids separated with comma, e.g. 1336142389,1346243375."}]
-         :produces ["application/json" "application/yaml"]
+                       :description "A set of Ids separated with comma, e.g. 1336142389,1346243375."}
+                      {:name :_format
+                       :schema {:type :string :enum [:json :yaml :edn]}
+                       :in :query
+                       :required false
+                       :description "The output format: JSON, YAML or EDN."}]
+         :produces ["application/json" "text/yaml" "text/edn"]
          :responses {200 {:description "Successful operation"
                           :schema {:$ref "#/definitions/BundleOrganization"}}
                      400 {:description "Input parameters are malformed."
