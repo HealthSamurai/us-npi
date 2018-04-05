@@ -1,5 +1,5 @@
 {:swagger "2.0"
- :schemes ["http"]
+ :schemes ["http" "https"]
  :basePath "/"
  :tags [{:name "FHIR" :description "FHIR is the latest standard to be developed under the HL7 organization."}
         {:name "NPI" :description "A National Provider Identifier or NPI is a unique 10-digit identification number issued to health care providers in the United States."}]

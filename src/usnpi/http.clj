@@ -31,7 +31,7 @@
   (some-> request :params :_format str/lower-case (= value)))
 
 (defn accept-encoding? [request mime]
-  (some-> request :headers (get "accept-encoding") str/lower-case (str/includes? mime)))
+  (some-> request :headers (get "accept") str/lower-case (str/includes? mime)))
 
 (defn guess-encoding
   [request]
