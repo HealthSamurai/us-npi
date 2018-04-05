@@ -90,7 +90,7 @@
       ((:match h) (assoc req :params params)))
     (http/http-resp 404 (format "URL %s not found." uri))))
 
-(def handler
+(def app
   (-> #'index
       cors-mw
       http/wrap-encoding
@@ -99,7 +99,7 @@
 (defn start-server [& [{:keys [port] :as opt}]]
   (let [port (or port 8080)]
     (log/infof "Starting server on port %s..." port)
-    (server/run-server handler {:port port})))
+    (server/run-server app {:port port})))
 
 (defn init [& [opt]]
   (env/init)

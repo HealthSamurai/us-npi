@@ -4,4 +4,4 @@
 (defn read-body
   "Reads the data from a Ring response."
   [res]
-  (:body res))
+  (-> res :body (json/parse-string true)))

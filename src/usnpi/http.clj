@@ -79,7 +79,6 @@
 (defn wrap-encoding
   [handler]
   (fn [request]
-    (clojure.tools.logging/info request)
     (when-let [response (handler request)]
       (if (data-response? response)
         (let [encoding (guess-encoding request)]
