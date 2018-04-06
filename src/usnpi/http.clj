@@ -84,3 +84,20 @@
         (let [encoding (guess-encoding request)]
           (encode-response encoding response))
         response))))
+
+(defn wrap-cors
+  [handler]
+  (fn [{method :request-method hs :headers :as request}]
+    (if (= method :options)
+      {:status 200
+       :body {:message "preflight complete"}
+       :headers {"Access-Control-Allow-Headers" (get hs "access-control-request-headers")
+                 "Access-Control-Allow-Methods" (get hs "access-control-request-method")
+                 "Access-Control-Allow-Origin" (get hs "origin")
+                 "Access-Control-Allow-Credentials" "true"
+                 "Access-Control-Expose-Headers" "Location, Content-Location, Category, Content-Type, X-total-count"}}
+      (when-let [response (handler request)]
+        (update response :headers merge
+                {"Access-Control-Allow-Origin" (get hs "origin")
+                 "Access-Control-Allow-Credentials" "true"
+                 "Access-Control-Expose-Headers" "Location, Content-Location, Category, Content-Type, X-total-count"})))))

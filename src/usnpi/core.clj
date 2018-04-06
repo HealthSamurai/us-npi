@@ -51,29 +51,6 @@
     (:api-ops env)
     (merge routes-ops)))
 
-(defn allow [origin resp]
-  (merge-with
-    merge resp
-    {:headers
-     {"Access-Control-Allow-Origin" origin
-      "Access-Control-Allow-Credentials" "true"
-      "Access-Control-Expose-Headers" "Location, Content-Location, Category, Content-Type, X-total-count"}}))
-
-(defn cors-mw [f]
-  (fn [{meth :request-method  hs :headers :as req}]
-    (if (= :options meth)
-      (let [headers (get hs "access-control-request-headers")
-            origin (get hs "origin")
-            meth  (get hs "access-control-request-method")]
-        {:status 200
-         :body {:message "preflight complete"}
-         :headers {"Access-Control-Allow-Headers" headers
-                   "Access-Control-Allow-Methods" meth
-                   "Access-Control-Allow-Origin" origin
-                   "Access-Control-Allow-Credentials" "true"
-                   "Access-Control-Expose-Headers" "Location, Content-Location, Category, Content-Type, X-total-count"}})
-      (f req))))
-
 (defn- log-request
   [request]
   (log/debugf "%s %s %s"
@@ -90,7 +67,7 @@
 
 (def app
   (-> #'index
-      cors-mw
+      http/wrap-cors
       http/wrap-encoding
       wrap-keyword-params
       wrap-params
