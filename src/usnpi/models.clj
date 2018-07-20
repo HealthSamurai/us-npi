@@ -141,7 +141,7 @@
    :address rule-address
 
    :type [{:coding [{:system "http://nucc.org"
-                     :code :healthcare_provider_taxonomy_code}]}]
+                     :code :healthcare_provider_taxonomy_code_1}]}]
 
    :contact
    [{:purpose
