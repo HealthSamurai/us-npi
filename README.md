@@ -211,7 +211,7 @@ make
 
 ## TODO
 
-* Taxonomy terminology
+* Taxonomy terminologyy
 * Implement _elements to get only some elements form resource_
 
 ## License
