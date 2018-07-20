@@ -140,6 +140,9 @@
    :telecom rule-telecom
    :address rule-address
 
+   :type [{:coding [{:system "http://nucc.org"
+                     :code :healthcare_provider_taxonomy_code}]}]
+
    :contact
    [{:purpose
      {:coding [{:system "http://hl7.org/fhir/contactentity-type"
