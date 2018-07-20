@@ -12,7 +12,7 @@ pipeline:
   GIT_COMMIT:
     command: "git rev-parse --short HEAD"
 - type: env
-  NPI_REPO: eu.gcr.io/vivid-kite-171620/usnpi
+  NPI_REPO: eu.gcr.io/aidbox2-205511/usnpi
 
 # Restore cache
 - type: maven
