@@ -98,7 +98,15 @@
 
         (let [res (usnpi/app (mock/request :get url {:q "g:David c:Roger"}))]
           (is (= (:status res) 200))
-          (is (-> res read-body :entry not-empty)))))))
+          (is (-> res read-body :entry not-empty)))
+
+        (let [res (usnpi/app (mock/request :get url {:q "zip:100134396"}))]
+          (is (= (:status res) 200))
+          (is (-> res read-body :entry not-empty)))
+
+        (let [res (usnpi/app (mock/request :get url {:q "zip:991"}))]
+          (is (= (:status res) 200))
+          (is (-> res read-body :entry empty)))))))
 
 (deftest test-org-api
   (testing "Single organization"

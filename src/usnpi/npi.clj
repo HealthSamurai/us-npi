@@ -75,7 +75,9 @@
     [:f :name 1 :family]
 
     [:s :address 0 :state]
-    [:c :address 0 :city]]))
+    [:c :address 0 :city]
+
+    [:zip :address 0 :postalCode]]))
 
 (defn sql-like-pract [term]
   (db/raw (format "\n%s ilike '%%%s%%'" sql-like-clause-pract term)))
