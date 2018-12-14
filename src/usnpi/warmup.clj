@@ -27,4 +27,9 @@ LIMIT 10;
   []
   (db/query "select pg_prewarm('pract_trgm_idx')")
   (db/query "select pg_prewarm('org_trgm_idx')")
+  (db/query "select pg_prewarm('pract_city_trgm_idx')")
+  (db/query "select pg_prewarm('pract_state_trgm_idx')")
+  (db/query "select pg_prewarm('pract_zip_trgm_idx')")
+  (db/query "select pg_prewarm('pract_given_trgm_idx')")
+  (db/query "select pg_prewarm('pract_family_trgm_idx')")
   nil)

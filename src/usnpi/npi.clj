@@ -79,8 +79,32 @@
 
     [:zip :address 0 :postalCode]]))
 
+(def field-queries
+  {"zip" "resource#>>'{address,0,postalCode}'"
+   "c" "resource#>>'{address,0,city}'"
+   "s" "resource#>>'{address,0,state}'"
+   "g" "(coalesce((resource#>>'{name,0,given,0}'), '') || ' '
+|| coalesce((resource#>>'{name,0,given,1}'), '') || ' '
+|| coalesce((resource#>>'{name,1,given,0}'), '') || ' '
+|| coalesce((resource#>>'{name,1,given,1}'), ''))"
+   "f" "(coalesce((resource#>>'{name,0,family}'), '') || ' '
+|| coalesce((resource#>>'{name,1,family}'), ''))"})
+
+(defn get-like-parameters [term]
+  (let [[f s :as parts] (str/split term #"\:" 2)]
+    (if (= 2 (count parts))
+      [(get field-queries f) "" s]
+      [sql-like-clause-pract "%" term])))
+
 (defn sql-like-pract [term]
-  (db/raw (format "\n%s ilike '%%%s%%'" sql-like-clause-pract term)))
+  (let [[clause prefix term] (get-like-parameters term)]
+    (db/raw (format "%s ilike '%s%s%%'" clause prefix term))))
+
+(defn sql-like-pract-with-or [term]
+  (let [parts (str/split term #"\|")]
+    (if (< 1 (count parts))
+      (into [:or] (mapv sql-like-pract parts))
+      (sql-like-pract term))))
 
 (def trgrm_idx
   (format "CREATE INDEX IF NOT EXISTS pract_trgm_idx ON practitioner USING GIST ((\n%s\n) gist_trgm_ops);"
@@ -118,9 +142,8 @@
         q (assoc query-practitioner :limit limit)
 
         q (if-not (empty? words)
-            (update q :where concat (map sql-like-pract words))
+            (update q :where concat (map sql-like-pract-with-or words))
             q)
-
         models (db/query (db/to-sql q))]
 
     (http/http-resp (as-bundle (process-models models opt)))))
