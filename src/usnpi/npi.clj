@@ -157,16 +157,36 @@
   (gen-search-expression
    [[:n :name]
     [:s :address 0 :state]
-    [:c :address 0 :city]]))
+    [:c :address 0 :city]
+    [:zip :address 0 :postalCode]]))
 
-(defn sql-like-org [term]
-  (db/raw (format "\n%s ilike '%%%s%%'" sql-like-clause-org term)))
+(def org-field-queries
+  {"zip" "resource#>>'{address,0,postalCode}'"
+   "c" "resource#>>'{address,0,city}'"
+   "s" "resource#>>'{address,0,state}'"
+   "n" "resource#>>'{name}'"})
 
 (def ^:private
   query-organization
   {:select [:resource]
    :from [:organizations]
    :where [:and [:not :deleted]]})
+
+(defn get-like-parameters-org [term]
+  (let [[f s :as parts] (str/split term #"\:" 2)]
+    (if (= 2 (count parts))
+      [(get org-field-queries f) "" s]
+      [sql-like-clause-org "%" term])))
+
+(defn sql-like-org [term]
+  (let [[clause prefix term] (get-like-parameters-org term)]
+    (db/raw (format "%s ilike '%s%s%%'" clause prefix term))))
+
+(defn sql-like-org-with-or [term]
+  (let [parts (str/split term #"\|")]
+    (if (< 1 (count parts))
+      (into [:or] (mapv sql-like-org parts))
+      (sql-like-org term))))
 
 (defn get-organization
   "Returns a single organization entity by its id."
@@ -198,7 +218,7 @@
         q (assoc query-organization :limit limit)
 
         q (if-not (empty? words)
-            (update q :where concat (map sql-like-org words))
+            (update q :where concat (map sql-like-org-with-or words))
             q)
 
         models (db/query (db/to-sql q))]
