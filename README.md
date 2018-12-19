@@ -34,7 +34,7 @@
   found or marked as deleted. Example:
 
   ```bash
-  curl https://npi.health-samurai.io/practitioner/1538375811
+  curl https://npi.aidbox.app/practitioner/1538375811
   ```
 
 - `GET /practitioner/$batch?ids=<id1,id2,...,idn>`
@@ -45,7 +45,7 @@
   [Bundle node][bundle] contains child nodes. Example:
 
   ```bash
-  curl https://npi.health-samurai.io/practitioner/$batch?ids=1538375811,1447466727
+  curl https://npi.aidbox.app/practitioner/$batch?ids=1538375811,1447466727
   ```
 
 - `GET /practitioner?q=<term>&_count=<count>`
@@ -57,12 +57,17 @@
   the result (100 by default). Returns a [Bundle node][bundle]. Example:
 
   ```bash
-  curl https://npi.health-samurai.io/practitioner?q=david&_count=5
+  curl https://npi.aidbox.app/practitioner?q=david&_count=5
   ```
 
   If a query term carries several words inside it, say `foo bar baz`, the result
   logic will concatenate them with `AND`s as the following pseudo-code does:
   `search(foo) AND search(bar) AND search(baz)`
+
+  If words in a query term separated by `|`, like `foo|bar`, the result
+  logic will concatenate them with `OR`s as the following pseudo-code does:
+  `search(foo) OR search(bar)`. Operators can be combined - for example query
+  `foo bar|baz` will work as `search(foo) AND (search(bar) OR search(baz))`
 
   A query term might have a prefix with colon to guarantee more accurate
   results. For example:
@@ -72,7 +77,8 @@
   - `z:JR` by a suffix;
   - `f:Thomson` by a family name;
   - `s:TX` by a USA state;
-  - `c:Rogersville` by a city name.
+  - `c:Rogersville` by a city name;
+  - `zip:06101` by a zip code.
 
 ### Organizations
 
@@ -82,7 +88,7 @@
   as deleted. Example:
 
   ```bash
-  curl https://npi.health-samurai.io/organization/1972660348
+  curl https://npi.aidbox.app/organization/1972660348
   ```
 
 - `GET /organization/$batch&ids=<id1,id2,...,idn>`
@@ -92,7 +98,7 @@
   node][bundle] with child entities. Example:
 
   ```bash
-  curl https://npi.health-samurai.io/organization/$batch?ids=1770796096,1700387479
+  curl https://npi.aidbox.app/organization/$batch?ids=1770796096,1700387479
   ```
 
 - `GET /organization?q=<term>&_count=<count>`
@@ -103,10 +109,10 @@
   result. Example:
 
   ```bash
-  curl https://npi.health-samurai.io/organization?q=WALMART
+  curl https://npi.aidbox.app/organization?q=WALMART
   ```
 
-  The system considers multiple words in a query term like `/practitioner?q=...`
+  The system considers multiple words and `|` in a query term like `/practitioner?q=...`
   does.
 
   A query term might have a prefix with colon to guarantee more accurate
@@ -114,7 +120,8 @@
 
   - `n:Walmart` searches by a name;
   - `s:TX` by a USA state;
-  - `c:Rogersville` by a city name.
+  - `c:Rogersville` by a city name;
+  - `zip:06101` by a zip code.
 
 ### Other FHIR endpoints
 
@@ -124,7 +131,7 @@
   endpoints. Example:
 
   ```bash
-  curl https://npi.health-samurai.io/metadata
+  curl https://npi.aidbox.app/metadata
   ```
 
 ### System status
@@ -134,7 +141,7 @@
   Returns some of ENV variables, e.g. a Git commit hash. Example:
 
   ```bash
-  curl https://npi.health-samurai.io/system/env
+  curl https://npi.aidbox.app/system/env
   ```
 
 - `GET /system/updates`
@@ -143,7 +150,7 @@
   ignored when trying to process them once again. Example:
 
   ```bash
-  curl https://npi.health-samurai.io/system/updates
+  curl https://npi.aidbox.app/system/updates
   ```
 
 - `GET /system/tasks`
@@ -151,7 +158,7 @@
   Returns a list of tasks with their schedule info and status. Example:
 
   ```bash
-  curl https://npi.health-samurai.io/system/tasks
+  curl https://npi.aidbox.app/system/tasks
   ```
 
 - `GET /system/beat`
@@ -160,7 +167,7 @@
   known as `beat`) is working or not. Example:
 
   ```bash
-  curl https://npi.health-samurai.io/system/beat
+  curl https://npi.aidbox.app/system/beat
   ```
 
 - `GET /system/db`
@@ -170,7 +177,7 @@
   settings. Example:
 
   ```bash
-  curl https://npi.health-samurai.io/system/db
+  curl https://npi.aidbox.app/system/db
   ```
 
 ## Install
@@ -216,7 +223,7 @@ make
 
 ## License
 
-Copyright © 2017 niquola
+Copyright © 2018 Health Samurai
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
