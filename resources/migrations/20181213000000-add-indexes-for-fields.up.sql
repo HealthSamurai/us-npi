@@ -21,10 +21,14 @@ create index if not exists pract_family_trgm_idx on practitioner
 using gist ((coalesce((resource#>>'{name,0,family}'), '') || ' '
 || coalesce((resource#>>'{name,1,family}'), '')) gist_trgm_ops);
 
--- 'p:' || coalesce((resource#>>'{name,0,prefix,0}'), '') || ' ' ||
--- 'p:' || coalesce((resource#>>'{name,1,prefix,0}'), '') || ' ' ||
+create index if not exists pract_prefix_trgm_idx on practitioner
+using gist ((coalesce((resource#>>'{name,0,prefix,0}'), '') || ' '
+|| coalesce((resource#>>'{name,0,prefix,1}'), '') || ' '
+|| coalesce((resource#>>'{name,1,prefix,0}'), '') || ' '
+|| coalesce((resource#>>'{name,1,prefix,1}'), '')) gist_trgm_ops);
 
--- 'z:' || coalesce((resource#>>'{name,1,suffix,0}'), '') || ' ' ||
--- 'z:' || coalesce((resource#>>'{name,0,suffix,0}'), '') || ' ' ||
+create index if not exists pract_suffix_trgm_idx on practitioner
+using gist ((coalesce((resource#>>'{name,0,suffix,0}'), '') || ' '
+|| coalesce((resource#>>'{name,1,suffix,0}'), '')) gist_trgm_ops);
 
 commit;

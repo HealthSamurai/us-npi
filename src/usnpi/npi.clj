@@ -87,8 +87,10 @@
 || coalesce((resource#>>'{name,0,given,1}'), '') || ' '
 || coalesce((resource#>>'{name,1,given,0}'), '') || ' '
 || coalesce((resource#>>'{name,1,given,1}'), ''))"
-   "p" "(coalesce((resource#>>'{name,0,prefix,0}'), '') || ' '
-|| coalesce((resource#>>'{name,1,prefix,0}'), ''))"
+   "p" "(coalesce(resource#>>'{name,0,prefix,0}'), '') || ' '
+|| coalesce((resource#>>'{name,0,prefix,1}'), '') || ' '
+|| coalesce((resource#>>'{name,1,prefix,0}'), '') || ' '
+|| coalesce((resource#>>'{name,1,prefix,1}'), '')"
    "z" "(coalesce((resource#>>'{name,0,suffix,0}'), '') || ' '
 || coalesce((resource#>>'{name,1,suffix,0}'), ''))"
    "f" "(coalesce((resource#>>'{name,0,family}'), '') || ' '
