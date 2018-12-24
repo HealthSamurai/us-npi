@@ -8,6 +8,10 @@
 
 [US NPI][npi] registry on [FHIR][fhir].
 
+All examples from this tutorial can be run in Postman: 
+
+[![Run in Postman](https://run.pstmn.io/button.svg)](https://app.getpostman.com/view-collection/840342c138ba4d8aa0cc?referrer=https%3A%2F%2Fapp.getpostman.com%2Frun-collection%2F840342c138ba4d8aa0cc%23%3Fenv%255BNPI%255D%3DW3sia2V5IjoiYmFzZSIsInZhbHVlIjoiaHR0cHM6Ly9ucGkuYWlkYm94LmFwcCIsImRlc2NyaXB0aW9uIjoiIiwidHlwZSI6InRleHQiLCJlbmFibGVkIjp0cnVlfV0%3D&_ga=2.58978797.1959884248.1545653270-654445837.1543359065)
+
 # Table of Contents
 
 <!-- toc -->
