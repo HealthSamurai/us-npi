@@ -20,7 +20,7 @@
   "software": {
     "name": "Health Samurai US NPI Server"
   },
-  "fhirVersion": "1.0.0",
+  "fhirVersion": "3.0.1",
   "acceptUnknown": "no",
   "format": [
     "json"
