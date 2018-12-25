@@ -6,7 +6,7 @@
 [pract]:https://www.hl7.org/fhir/practitioner.html
 [org]:https://www.hl7.org/fhir/organization.html
 
-[US NPI][npi] registry on [FHIR][fhir].
+[US NPI][npi] registry on [FHIR][fhir] powered by [Health Samurai](http://www.health-samurai.io) | [Aidbox](http://www.health-samurai.io/aidbox) | [Fhirbase](http://www.health-samurai.io/fhirbase).
 
 All examples from this tutorial can be run in Postman: 
 
