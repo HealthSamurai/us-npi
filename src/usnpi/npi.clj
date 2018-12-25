@@ -65,13 +65,13 @@
    [[:g :name 0 :given 0]
     [:g :name 0 :given 1]
     [:p :name 0 :prefix 0]
-    [:z :name 0 :siffix 0]
+    [:z :name 0 :suffix 0]
     [:f :name 0 :family]
 
     [:g :name 1 :given 0]
     [:g :name 1 :given 1]
     [:p :name 1 :prefix 0]
-    [:z :name 1 :siffix 0]
+    [:z :name 1 :suffix 0]
     [:f :name 1 :family]
 
     [:s :address 0 :state]
@@ -99,7 +99,11 @@
 (defn get-like-parameters [term]
   (let [[f s :as parts] (str/split term #"\:" 2)]
     (if (= 2 (count parts))
-      [(get field-queries f) "" s]
+      (let [query (get field-queries f)
+            prefix (if (and query
+                            (= "(coalesce" (subs query 0 9)))
+                     "%" "")]
+        [query prefix s])
       [sql-like-clause-pract "%" term])))
 
 (defn sql-like-pract [term]
