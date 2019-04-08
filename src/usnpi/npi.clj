@@ -26,7 +26,7 @@
   [x]
   (if (keyword? x) (name x) (str x)))
 
-(defn- as-bundle
+(defn as-bundle
   "Composes a Bundle JSON response from a list of JSON strings."
   [models]
   {:entry models})

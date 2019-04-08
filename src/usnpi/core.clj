@@ -8,6 +8,7 @@
             [usnpi.fhir :as fhir]
             [usnpi.http :as http]
             [usnpi.swagger :as swagger]
+            [usnpi.search :as search]
             [usnpi.env :as env :refer [env]]
             [clojure.tools.logging :as log]
             [org.httpkit.server :as server]
@@ -29,6 +30,8 @@
 
    "swagger" {:GET #'swagger/api-index
               "schema" {:GET #'swagger/api-schema}}
+
+   "search" {:GET #'search/search}
 
    "practitioner" {:GET #'npi/get-practitioners
                    "$batch" {:GET #'npi/get-practitioners-by-ids}

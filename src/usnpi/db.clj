@@ -5,9 +5,15 @@
             [cheshire.core :as json]
             [clojure.tools.logging :as log]
             [migratus.core :as migratus]
+            [honeysql.format :as sqlf]
             [usnpi.env :refer [env]])
   (:import org.postgresql.util.PGobject))
 
+(defmethod sqlf/fn-handler "ilike" [_ col qstr]
+  (str (sqlf/to-sql col) " ilike " (sqlf/to-sql qstr)))
+
+(defmethod sqlf/format-clause :union-with-parens [[_ [left right]] _]
+  (str "(" (sqlf/to-sql left) ") union (" (sqlf/to-sql right) ")"))
 
 (def ^:private
   db-url

@@ -14,4 +14,4 @@
   []
   (let [spec :usnpi.spec/env]
     (when-not (s/valid? spec env)
-    (error! "Wrong config file, check %s declaration." spec))))
+      (error! "Wrong config file, check %s declaration." spec))))
