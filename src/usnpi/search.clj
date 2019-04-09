@@ -2,6 +2,7 @@
   (:require [usnpi.http :as http]
             [usnpi.db :as db]
             [usnpi.npi :as npi]
+            [honeysql.format :as sqlf]
             [clojure.string :as str]))
 
 (defmacro resource [& fields]
@@ -20,15 +21,20 @@
     state        (conj [:=     (resource :address :state) state])
     postal-codes (conj [:in    (resource :address :postalCode) postal-codes])))
 
-(defn with-count [select {:keys [count]}]
-  (cond-> select
-    count (assoc :limit count)))
-
 (defn only-organization? [{:keys [name org first-name last-name]}]
   (and org (not name) (not first-name) (not last-name)))
 
 (defn only-practitioner? [{:keys [name org first-name last-name]}]
   (and (or first-name last-name) (not name) (not org)))
+
+(defn with-count [query {:keys [count]}]
+  (cond-> query
+    count (assoc :limit count)))
+
+(defn with-order [query params pred col type ]
+  (if (pred params)
+    (assoc query :order-by [col])
+    (update query :select conj [col :name] [type :type])))
 
 (defn build-practitioner-sql [{:keys [name first-name last-name taxonomies] :as params}]
   (when-not (only-organization? params)
@@ -40,9 +46,9 @@
                     family       (conj [:ilike (resource :name 0 :family) (str family "%")])
                     first-name   (conj [:ilike (resource :name 0 :family) (str "%" first-name "%")])
                     taxonomies   (conj [:in    (resource :qualification 0 :code :coding 0 :code) taxonomies])
-                    :always      (build-where params))
-           :order-by [(resource :name 0 :family)]}
-          (with-count params)))))
+                    :always      (build-where params))}
+          (with-count params)
+          (with-order params only-practitioner? (resource :name 0 :family) 1)))))
 
 (defn build-organization-sql [{:keys [name org count] :as params}]
   (when-not (only-practitioner? params)
@@ -51,15 +57,24 @@
            :from [:organizations]
            :where (cond-> [:and [:= :deleted false]]
                     org          (conj [:ilike (resource :name) (str "%" org "%")])
-                    :always      (build-where params))
-           :order-by [(resource :name)]}
-          (with-count params)))))
+                    :always      (build-where params))}
+          (with-count params)
+          (with-order params only-organization? (resource :name) 2)))))
+
+(defmethod sqlf/format-clause :union-practitioner-and-organization [[_ [left right]] _]
+  (str "(" (sqlf/to-sql left) ") union all (" (sqlf/to-sql right) ")"))
+
+(defn union [practitioner-sql organization-sql]
+  {:select [:id :resource]
+   :from [[{:union-practitioner-and-organization [practitioner-sql
+                                                 organization-sql]} :q]]
+   :order-by [:type :name]})
 
 (defn search [{params :params}]
-  (let [practitioner-sql (build-practitioner-sql params)
-        organization-sql (build-organization-sql params)
+  (let [p-sql (build-practitioner-sql params)
+        o-sql (build-organization-sql params)
         sql (cond
-              (and practitioner-sql organization-sql) {:union-with-parens [practitioner-sql organization-sql]}
-              practitioner-sql                        practitioner-sql
-              organization-sql                        organization-sql)]
+              (and p-sql o-sql) (union p-sql o-sql)
+              p-sql             p-sql
+              o-sql             o-sql)]
     (http/http-resp (npi/as-bundle (db/query (db/to-sql sql))))))

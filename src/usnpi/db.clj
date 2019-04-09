@@ -12,9 +12,6 @@
 (defmethod sqlf/fn-handler "ilike" [_ col qstr]
   (str (sqlf/to-sql col) " ilike " (sqlf/to-sql qstr)))
 
-(defmethod sqlf/format-clause :union-with-parens [[_ [left right]] _]
-  (str "(" (sqlf/to-sql left) ") union (" (sqlf/to-sql right) ")"))
-
 (def ^:private
   db-url
   (format "jdbc:postgresql://%s:%s/%s?stringtype=unspecified&user=%s&password=%s"
