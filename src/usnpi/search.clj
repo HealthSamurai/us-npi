@@ -17,9 +17,9 @@
 
 (defn build-where [where {:keys [postal-codes state city]}]
   (cond-> where
-    city         (conj [:ilike (resource :address :city) (str "%" city "%")])
-    state        (conj [:=     (resource :address :state) state])
-    postal-codes (conj [:in    (resource :address :postalCode) postal-codes])))
+    city         (conj [:ilike (resource :address 0 :city) (str "%" city "%")])
+    state        (conj [:=     (resource :address 0 :state) state])
+    postal-codes (conj [:in    (resource :address 0 :postalCode) postal-codes])))
 
 (defn only-organization? [{:keys [name org first-name last-name]}]
   (and org (not name) (not first-name) (not last-name)))
@@ -70,8 +70,19 @@
                                                  organization-sql]} :q]]
    :order-by [:type :name]})
 
+(defn as-vector [s]
+  (when-not (str/blank? s)
+    (str/split s #",")))
+
+#_(db/query (db/to-sql {:select [(resource :address 0 :postalCode)]
+                      :from [:practitioner]
+                      :limit 3}))
+
 (defn search [{params :params}]
-  (let [p-sql (build-practitioner-sql params)
+  (let [params (-> params
+                   (update :postal-codes as-vector)
+                   (update :taxonomies as-vector))
+        p-sql (build-practitioner-sql params)
         o-sql (build-organization-sql params)
         sql (cond
               (and p-sql o-sql) (union p-sql o-sql)
