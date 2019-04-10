@@ -1,0 +1,14 @@
+BEGIN;
+
+DROP INDEX IF EXISTS idxprcgiven;
+DROP INDEX IF EXISTS idxprcfamily;
+DROP INDEX IF EXISTS idxprcspec;
+DROP INDEX IF EXISTS idxorgname;
+DROP INDEX IF EXISTS idxprczip;
+DROP INDEX IF EXISTS idxorgzip;
+DROP INDEX IF EXISTS idxprccity;
+DROP INDEX IF EXISTS idxorgcity;
+DROP INDEX IF EXISTS idxprcstate;
+DROP INDEX IF EXISTS idxorgstate;
+
+COMMIT;
