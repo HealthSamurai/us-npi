@@ -44,7 +44,7 @@
            :from [:practitioner]
            :where (cond-> [:and [:= :deleted false]]
                     family       (conj [:ilike (resource :name 0 :family) (str family "%")])
-                    first-name   (conj [:ilike (resource :name 0 :family) (str "%" first-name "%")])
+                    first-name   (conj [:ilike (resource :name 0 :given) (str "%" first-name "%")])
                     taxonomies   (conj [:in    (resource :qualification 0 :code :coding 0 :code) taxonomies])
                     :always      (build-where params))}
           (with-count params)
@@ -73,10 +73,6 @@
 (defn as-vector [s]
   (when-not (str/blank? s)
     (str/split s #",")))
-
-#_(db/query (db/to-sql {:select [(resource :address 0 :postalCode)]
-                      :from [:practitioner]
-                      :limit 3}))
 
 (defn search [{params :params}]
   (let [params (-> params
