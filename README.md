@@ -20,6 +20,7 @@ All examples from this tutorial can be run in Postman:
   * [Base URL](#base-url)
   * [Practitioner](#practitioner)
   * [Organizations](#organizations)
+  * [Search](#search)
   * [Other FHIR endpoints](#other-fhir-endpoints)
   * [System status](#system-status)
 - [Install](#install)
@@ -131,6 +132,27 @@ All examples from this tutorial can be run in Postman:
   - `s:TX` by USA state;
   - `c:Rogersville` by city name;
   - `zip:06101` by zip code.
+  
+  
+### Search
+
+- `GET /search`
+  
+  Endpoint for searching healthcare providers. Return both `Practitioner` and `Organization`. Supported query parameters:
+  
+  - `name:Fowler` searches practitioners where `resource#>>'{name,0,family}'` starts with `name` and organizations where `resource#>>'{name}'` includes `name`.
+  - `first-name:Leo` searches practitioners where `resource#>>'{name,0,given}'` includes `first-name`.
+  - `last-name:Brodie` searches practitioners where `resources#>>'{name,0,family}'` starts with `last-name`.
+  - `org:Karen` searches organizations where `resource#>>'{name}` inludes `org`.
+  - `taxonomies:122300000X,1223D0001X,1223D0004X` searches practitioners where `resource#>>'{qualification,0,code,coding,0,code}'` in specified `taxonomies`.
+  - `postal-codes:80304,80310,80301` searches practitioners or organizations where `resource#>>'{address,0,postalCode}'` in specified `postal-codes`.
+  - `state:AZ` searches practitioners or organizations where `resource#>>'{address,0,state}'` equal specified `state`.
+  - `city:New York` searches practitioners or organizations where `resource#>>'{address,0,city}'` includes specified `city`.
+  - `count:50` limit returned results.
+  
+  Peculiarities:
+  
+  When `name` is specified then `last-name`, `first-name`, `org` will be omitted. If specified `first-name` or `last-name` and `name` and `org` omitted then search will be only by practitoners. If specified `org` and `name`, `last-name` and `first-name` omitted then search will be only by organizations. If search only by both entities then limit will be applied to each of them. For example, we sets `count:5` and searches both practitioners and organizations then we limit 5 in practitioner query and 5 in organization query and query return up to 10 items. First in result will be practitioners which sort by `resource#>>'{name,0,family}'` then will be organizations which sort by `resource#>>'{name}`.
 
 ### Other FHIR endpoints
 
