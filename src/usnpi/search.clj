@@ -21,47 +21,52 @@
     state        (conj [:=     (resource :address 0 :state) state])
     postal-codes (conj [:in    (resource :address 0 :postalCode) postal-codes])))
 
-(defn only-organization? [{:keys [name org first-name last-name]}]
-  (and org (not name) (not first-name) (not last-name)))
+(defn only-organization? [{:keys [name org first-name last-name taxonomies]}]
+  (and org (not name) (not first-name) (not last-name) (not taxonomies)))
 
-(defn only-practitioner? [{:keys [name org first-name last-name]}]
-  (and (or first-name last-name) (not name) (not org)))
+(defn only-practitioner? [{:keys [name org first-name last-name taxonomies]}]
+  (and (or first-name last-name taxonomies) (not name) (not org)))
 
 (defn with-count [query {:keys [count]}]
   (cond-> query
     count (assoc :limit count)))
 
-(defn with-type [query params pred col type]
+(defn with-type [query params pred type]
   (if (pred params)
     query
-    (update query :select conj [col :name] [type :type])))
+    (update query :select conj [type :type])))
 
 (defn build-practitioner-sql [{:keys [name first-name last-name taxonomies] :as params}]
   (when-not (only-organization? params)
     (let [family     (or name last-name)
-          first-name (and (not name) first-name)]
-      (-> {:select [:id :resource]
+          first-name (and (not name) first-name)
+          name-col   (resource :name 0 :family)]
+      (-> {:select [:id :resource [name-col :name]]
            :from [:practitioner]
            :where (cond-> [:and [:= :deleted false]]
-                    family       (conj [:ilike (resource :name 0 :family) (str family "%")])
+                    family       (conj [:ilike name-col (str family "%")])
                     first-name   (conj [:ilike (resource :name 0 :given) (str "%" first-name "%")])
                     taxonomies   (conj [:in    (resource :qualification 0 :code :coding 0 :code) taxonomies])
-                    :always      (build-where params))
-           :order-by [(resource :name 0 :family)]}
+                    :always      (build-where params))}
           (with-count params)
-          (with-type params only-practitioner? (resource :name 0 :family) 1)))))
+          (with-type params only-practitioner? 1)))))
 
 (defn build-organization-sql [{:keys [name org count] :as params}]
   (when-not (only-practitioner? params)
-    (let [org (or name org)]
-      (-> {:select [:id :resource]
+    (let [org (or name org)
+          name-col (resource :name)]
+      (-> {:select [:id :resource [name-col :name]]
            :from [:organizations]
            :where (cond-> [:and [:= :deleted false]]
-                    org          (conj [:ilike (resource :name) (str "%" org "%")])
-                    :always      (build-where params))
-           :order-by [(resource :name)]}
+                    org          (conj [:ilike name-col (str "%" org "%")])
+                    :always      (build-where params))}
           (with-count params)
-          (with-type params only-organization? (resource :name) 2)))))
+          (with-type params only-organization? 2)))))
+
+(defn wrap-query [query]
+  {:select [:id :resource]
+   :from [[query :q]]
+   :order-by [:name]})
 
 (defmethod sqlf/format-clause :union-practitioner-and-organization [[_ [left right]] _]
   (str "(" (sqlf/to-sql left) ") union all (" (sqlf/to-sql right) ")"))
@@ -84,6 +89,6 @@
         o-sql (build-organization-sql params)
         sql (cond
               (and p-sql o-sql) (union p-sql o-sql)
-              p-sql             p-sql
-              o-sql             o-sql)]
+              p-sql             (wrap-query p-sql)
+              o-sql             (wrap-query o-sql))]
     (http/http-resp (npi/as-bundle (db/query (db/to-sql sql))))))
