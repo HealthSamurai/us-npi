@@ -25,6 +25,8 @@ LIMIT 10;
 
 (defn task-warmup-index
   []
+  (db/query "select pg_prewarm('pract_given_sort')")
+  (db/query "select pg_prewarm('org_name_sort')")
   (db/query "select pg_prewarm('pract_trgm_idx')")
   (db/query "select pg_prewarm('org_trgm_idx')")
   (db/query "select pg_prewarm('pract_city_trgm_idx')")

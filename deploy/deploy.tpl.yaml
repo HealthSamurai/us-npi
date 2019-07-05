@@ -124,6 +124,10 @@ spec:
         ports:
         - containerPort: <DB_PORT>
           protocol: TCP
+        resources:
+          requests:
+            cpu: "2"
+            memory: 8000Mi
 
 ---
 apiVersion: extensions/v1beta1

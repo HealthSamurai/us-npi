@@ -6,7 +6,8 @@
             [clojure.tools.logging :as log]
             [migratus.core :as migratus]
             [honeysql.format :as sqlf]
-            [usnpi.env :refer [env]])
+            [usnpi.env :refer [env]]
+            [clojure.string :as str])
   (:import org.postgresql.util.PGobject))
 
 (defmethod sqlf/fn-handler "ilike" [_ col qstr]
@@ -70,6 +71,7 @@
 ;;
 
 (defn query [& args]
+  (log/info (str/join \newline args))
   (apply jdbc/query *db* args))
 
 (defn get-by-id [& args]
