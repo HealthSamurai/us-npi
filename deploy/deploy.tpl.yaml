@@ -101,6 +101,9 @@ spec:
       - name: import
         persistentVolumeClaim:
           claimName: usnpi-cache
+      - name: dshm
+        emptyDir:
+          medium: Memory
       containers:
       - name: pg
         image: postgres:10
@@ -112,6 +115,8 @@ spec:
           subPath: pgdata
         - name: import
           mountPath: /import
+        - mountPath: /dev/shm
+          name: dshm
         env:
         - name: POSTGRES_USER
           value: "<DB_USER>"
