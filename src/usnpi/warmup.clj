@@ -42,6 +42,7 @@ LIMIT 10;
   (db/query "select pg_prewarm('idxprcfamily')")
   (db/query "select pg_prewarm('idxprcspec')")
   (db/query "select pg_prewarm('idxorgname')")
+  (db/query "select pg_prewarm('idxorgspec')")
   (db/query "select pg_prewarm('idxprczip')")
   (db/query "select pg_prewarm('idxorgzip')")
   (db/query "select pg_prewarm('idxprccity')")

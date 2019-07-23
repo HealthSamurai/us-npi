@@ -21,11 +21,11 @@
     state        (conj [:=     (resource :address 0 :state) state])
     postal-codes (conj [:in    (resource :address 0 :postalCode) postal-codes])))
 
-(defn only-organization? [{:keys [name org first-name last-name taxonomies]}]
-  (and org (not name) (not first-name) (not last-name) (not taxonomies)))
+(defn only-organization? [{:keys [name org first-name last-name]}]
+  (and org (not name) (not first-name) (not last-name)))
 
-(defn only-practitioner? [{:keys [name org first-name last-name taxonomies]}]
-  (and (or first-name last-name taxonomies) (not name) (not org)))
+(defn only-practitioner? [{:keys [name org first-name last-name]}]
+  (and (or first-name last-name) (not name) (not org)))
 
 (defn with-count [query {:keys [count]}]
   (cond-> query
@@ -51,7 +51,7 @@
           (with-count params)
           (with-type params only-practitioner? 1)))))
 
-(defn build-organization-sql [{:keys [name org count] :as params}]
+(defn build-organization-sql [{:keys [name org count taxonomies] :as params}]
   (when-not (only-practitioner? params)
     (let [org (or name org)
           name-col (resource :name)]
@@ -59,6 +59,7 @@
            :from [:organizations]
            :where (cond-> [:and [:= :deleted false]]
                     org          (conj [:ilike name-col (str "%" org "%")])
+                    taxonomies   (conj [:in    (resource :type 0 :coding 0 :code) taxonomies])
                     :always      (build-where params))}
           (with-count params)
           (with-type params only-organization? 2)))))
