@@ -81,10 +81,14 @@
   (when-not (str/blank? s)
     (str/split s #",")))
 
+(defn normalize-count [count]
+  (or count 50))
+
 (defn search [{params :params}]
   (let [params (-> params
                    (update :postal-codes as-vector)
-                   (update :taxonomies as-vector))
+                   (update :taxonomies as-vector)
+                   (update :count normalize-count))
         p-sql (build-practitioner-sql params)
         o-sql (build-organization-sql params)
         sql (cond
