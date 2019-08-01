@@ -7,6 +7,8 @@
             [clojure.data.csv :as csv]
             [ring.util.codec :refer [form-encode]]))
 
+(def max-taxonomies 15)
+
 ;;
 ;; URLs
 ;;
@@ -140,8 +142,13 @@
    :telecom rule-telecom
    :address rule-address
 
-   :type [{:coding [{:system "http://nucc.org"
-                     :code :healthcare_provider_taxonomy_code_1}]}]
+   :type
+   (vec
+    (for [i (range 1 (inc max-taxonomies))]
+      {:$type :when
+       :column (postfix :healthcare_provider_taxonomy_code i)
+       :expression {:coding [{:system "http://nucc.org"
+                              :code (postfix :healthcare_provider_taxonomy_code i)}]}}))
 
    :contact
    [{:purpose
@@ -210,7 +217,7 @@
 
    :qualification
    (vec
-    (for [i (range 1 15)]
+    (for [i (range 1 (inc max-taxonomies))]
       {:code {:coding [{:$type :when
                         :column (postfix :healthcare_provider_taxonomy_code i)
                         :expression {:system {:$type :url-npi

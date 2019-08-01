@@ -117,7 +117,8 @@
       (testing "OK"
         (let [res (usnpi/app (mock/request :get url-ok))]
           (is (= (:status res) 200))
-          (is (= (-> res read-body :address first :city) "SAINT LOUIS"))))
+          (is (= (-> res read-body :address first :city) "SAINT LOUIS"))
+          (is (= (-> res read-body :type (->> (mapcat :coding) (map :code))) '("207R00000X" "207R00001X")))))
 
       (testing "Missing"
         (let [res (usnpi/app (mock/request :get url-err))]
