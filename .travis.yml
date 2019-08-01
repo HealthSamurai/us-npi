@@ -2,6 +2,7 @@ language: clojure
 
 jdk:
   - openjdk8
+  - openjdk11
 
 env:
   - DB_HOST=localhost DB_DATABASE=usnpi_test DB_USER=postgres DB_PASSWORD=postgres DB_PORT=5432
