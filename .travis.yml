@@ -1,0 +1,25 @@
+language: clojure
+
+jdk:
+  - openjdk8
+  - openjdk11
+
+env:
+  - DB_HOST=localhost DB_DATABASE=usnpi_test DB_USER=postgres DB_PASSWORD=postgres DB_PORT=5432
+
+before_script:
+  - psql -c 'CREATE DATABASE usnpi_test' -U postgres
+  - psql -c "ALTER USER CURRENT_USER WITH PASSWORD 'postgres'" -U postgres
+  - lein migratus migrate
+
+script: lein test
+
+services:
+  - postgresql
+
+addons:
+  postgresql: "9.6"
+
+cache:
+  directories:
+    - $HOME/.m2
